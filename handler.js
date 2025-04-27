@@ -6,7 +6,6 @@ import KupaRashitSticker from './helpers/kupaRashitHandler.js';
 import sendSticker from './helpers/stickerMaker.js';
 import { DownloadV2, DownloadVideoMP4, downloadTYoutubeVideo, handlerQueueYTDownload } from './helpers/downloader.js';
 import { GLOBAL } from './src/storeMsg.js';
-import MemoryStore from './src/memorystore.js';
 import messageRetryHandler from './src/retryHandler.js'; // can be removed
 import ChatGPT from './helpers/chatgpt.js';
 import UnofficalGPT from './helpers/unofficalGPT.js';
@@ -634,7 +633,7 @@ export default async function handleMessage(sock, msg, mongo) {
     // used when dowlnoading file from LevNet
     if (textMsg.startsWith("!pdf")) {
         let customName = textMsg.replace("!pdf", "").trim();
-        let qoutedMsg = await MemoryStore.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+        let qoutedMsg = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
         if (!qoutedMsg) return sendMsgQueue(id, "יש לצטט הודעה");
         return downloadFileAsPDF(qoutedMsg, customName);
     }
@@ -725,7 +724,7 @@ export default async function handleMessage(sock, msg, mongo) {
         }
 
         //let history = await store.loadMessages(id, numMsgToLoad);
-        return MemoryStore.loadMessages(id, numMsgToLoad + 1)
+        return GLOBAL.store.loadMessages(id, numMsgToLoad + 1)
             .then(async (history) => {
                 console.log('history length loaded:', history.length);
 
@@ -768,7 +767,7 @@ export default async function handleMessage(sock, msg, mongo) {
             return sendMsgQueue(id, "יש להגיב על הודעה עם הטקסט שברצונך לסכם");
 
         // get qouted message
-        let quotedMsg = await MemoryStore.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
+        let quotedMsg = await GLOBAL.store.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
         if (!quotedMsg)
             return sendMsgQueue(id, "לא מצאתי את ההודעה שהגבת עליה, נסה להגיב על ההודעה שוב בעוד כמה שניות");
 
@@ -1008,7 +1007,7 @@ export default async function handleMessage(sock, msg, mongo) {
         if (!msg.message?.extendedTextMessage?.contextInfo?.stanzaId)
             return sendMsgQueue(id, "יש לצטט הודעה");
 
-        const qoutedMsg = await MemoryStore.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
+        const qoutedMsg = await GLOBAL.store.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
         /** @type {{keyMsg: {},groupInviteMessage: import('@adiwajshing/baileys').proto.Message.IGroupInviteMessage}} */
         const inviteDetails = JSON.parse(qoutedMsg.message?.conversation || qoutedMsg.message?.extendedTextMessage?.text || "{}");
 
@@ -1026,7 +1025,7 @@ export default async function handleMessage(sock, msg, mongo) {
     // temporarily unavailable
     return;
     // if the bot got a message that is not a command
-    const history = (await MemoryStore.loadMessages(id, 20));
+    const history = (await GLOBAL.store.loadMessages(id, 20));
     throttle(() => {
         //sendCustomMsgQueue(id, { react: { text: '⏳', key: msg.key } });
         unofficalGPT.chatWithCosmosRP(history)

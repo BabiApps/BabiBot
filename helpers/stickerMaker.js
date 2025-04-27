@@ -5,7 +5,7 @@ import ffmpeg from 'fluent-ffmpeg';
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 import { UltimateTextToImage, registerFont, getCanvasImage } from "ultimate-text-to-image";
 import { MsgType, getMsgType } from './msgType.js';
-import MemoryStore from '../src/memorystore.js';
+import { GLOBAL } from '../src/storeMsg.js';
 import { sendMsgQueue, errorMsgQueue, sendCustomMsgQueue } from '../src/QueueObj.js';
 import { transparentBackground } from "transparent-background";
 import Jimp from "jimp";
@@ -184,11 +184,11 @@ export default async function sendSticker(msg) {
     // get the quoted message
     // if can't get it - send to the user a message
     if (msg.message?.extendedTextMessage?.contextInfo?.stanzaId) {
-        let quoted = await MemoryStore.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+        let quoted = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
         if (!quoted) {
             console.log("retrying to get quoted message in 3 seconds...")
             await sleep(3000)
-            quoted = await MemoryStore.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+            quoted = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
         }
         if (!quoted) return sendMsgQueue(id, "אופס... לא מצאתי את ההודעה שציטטת\nנסה לצטט שוב בעוד כמה שניות")
 

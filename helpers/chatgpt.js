@@ -4,7 +4,6 @@ import { convertOGGToMp3, isOGGFile } from "./convertor.js";
 import { sendMsgQueue, errorMsgQueue } from "../src/QueueObj.js";
 import { downloadMediaMessage } from "@adiwajshing/baileys";
 import { getMsgType, MsgType } from "./msgType.js";
-import MemoryStore from "../src/memorystore.js";
 import { GLOBAL } from "../src/storeMsg.js";
 
 const sttPricePerMinute = 0.01;
@@ -269,10 +268,10 @@ ChatGPT.prototype.stt = async function (msg) {
     }
 
     // get from store
-    quotedMsg = await MemoryStore.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
+    quotedMsg = await GLOBAL.store.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
     if (!quotedMsg) {
       await sleep(2000);
-      quotedMsg = await MemoryStore.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
+      quotedMsg = await GLOBAL.store.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
     }
     if (!quotedMsg) {
       return sendMsgQueue(id, "ההודעה המצוטטת לא נמצאה, נסה לשלוח את הפקודה שוב בעוד כמה שניות")

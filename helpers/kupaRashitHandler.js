@@ -1,8 +1,8 @@
-import MemoryStore from '../src/memorystore.js'
 import { downloadMediaMessage } from '@adiwajshing/baileys';
 import kupaRashit from '../src/schemas/kupaRashit.js';
 import { Sticker } from 'wa-sticker-formatter';
 import { sendCustomMsgQueue, errorMsgQueue } from '../src/QueueObj.js';
+import { GLOBAL } from '../src/storeMsg.js';
 
 
 /**
@@ -18,7 +18,7 @@ async function KupaRashitSticker(msg, superuser) {
         let msgID = msg.message.extendedTextMessage.contextInfo.stanzaId;
         if (!msgID) return;
 
-        let quotedMessage = await MemoryStore.loadMessage(id, msgID);
+        let quotedMessage = await GLOBAL.store.loadMessage(id, msgID);
         // if no quoted message, continue to search for sticker
         if (!quotedMessage) return searchKupaRashit(id);
 

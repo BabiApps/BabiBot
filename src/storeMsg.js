@@ -4,7 +4,7 @@ import fs from "fs";
 /** @type {import('@adiwajshing/baileys').WASocket} */
 let tempSock;
 
-/** @type {import('./memorystore').MemoryStore} */
+/** @type {import('./prismaStore').DatabaseStore} */
 let tempStore;
 
 /** @type {{[jid:string]: {"messageID": {reactionsCount: number,minToMute: number, startTime: number}}}}*/

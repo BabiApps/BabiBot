@@ -10,7 +10,7 @@ import QRCode from 'qrcode';
 import Mongo from './mongo.js';
 import { errorMsgQueue, handlerQueue } from './src/QueueObj.js';
 import { GLOBAL } from './src/storeMsg.js';
-import MemoryStore from './src/memorystore.js';
+import PrismaStore from './src/prismaStore.js';
 //import jwt from 'jsonwebtoken';
 import handleMessage from './handler.js';
 //import messageRetryHandler from "./src/retryHandler.js";
@@ -32,8 +32,8 @@ app.use(bodyParser.json());
 const mongo = new Mongo();
 
 const getMessage = async (key) => {
-    if (MemoryStore) {
-        const msg = await MemoryStore.loadMessage(key.remoteJid, key.id)
+    if (PrismaStore) {
+        const msg = await PrismaStore.loadMessage(key.remoteJid, key.id)
         return msg?.message || undefined
     }
     // only if store is present
@@ -54,7 +54,7 @@ async function connectToWhatsApp() {
             creds: state.creds,
             keys: state.keys,
         },
-        logger: MemoryStore.logger,
+        logger: PrismaStore.logger,
         version,
         msgRetryCounterMap,
         retryRequestDelayMs: 150,
@@ -64,8 +64,8 @@ async function connectToWhatsApp() {
     })
 
     try {
-        MemoryStore.store.bind(sock.ev)
-        GLOBAL.store = MemoryStore;
+        PrismaStore.bind(sock.ev);
+        GLOBAL.store = PrismaStore;
     } catch (error) {
         console.log(error);
         errorMsgQueue(error);

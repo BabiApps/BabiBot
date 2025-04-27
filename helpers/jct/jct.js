@@ -8,7 +8,6 @@ import { downloadMediaMessage } from '@adiwajshing/baileys';
 import didYouMean from 'didyoumean2';
 import fetch from 'node-fetch';
 import fs from 'fs';
-import e from 'express';
 
 const url_begin = 'https://docs.google.com/spreadsheets/d/';
 const url_end = '/gviz/tq?&tqx=out:json';
