@@ -1,4 +1,4 @@
-import { makeInMemoryStore } from '@adiwajshing/baileys'
+import makeInMemoryStore from './makeMemoryStore.js';
 import { pino } from "pino";
 import fs from "fs";
 import os from "os";
