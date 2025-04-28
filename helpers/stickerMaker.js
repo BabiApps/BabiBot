@@ -7,7 +7,7 @@ import { UltimateTextToImage, registerFont, getCanvasImage } from "ultimate-text
 import { MsgType, getMsgType } from './msgType.js';
 import MemoryStore from '../src/memorystore.js';
 import { sendMsgQueue, errorMsgQueue, sendCustomMsgQueue } from '../src/QueueObj.js';
-import { transparentBackground } from "transparent-background";
+//import { transparentBackground } from "transparent-background";
 import Jimp from "jimp";
 import sharp from 'sharp';
 
@@ -282,9 +282,9 @@ async function makeMediaSticker(msg, commandText) {
         if (bufferType === 'image/webp') {
             buffer = await sharp(buffer).png().toBuffer();
         }
-        if (params.background === "NoBackground" && enableRemoveBackground) {
-            buffer = await transparentBackground(buffer, "png", { fast: true });
-        }
+        // if (params.background === "NoBackground" && enableRemoveBackground) {
+        //     buffer = await transparentBackground(buffer, "png", { fast: true });
+        // }
         let text = msg.message?.imageMessage?.caption || "";
 
         // if the user wrote the command with text - remove the text
