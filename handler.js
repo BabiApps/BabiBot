@@ -731,7 +731,7 @@ export default async function handleMessage(sock, msg, mongo) {
 
                 if (history.length < 1)
                     return sendMsgQueue(id, "לא מצאתי היסטוריה עבור שיחה זו")
-                
+
                 // sort by time and remove the last message (the command itself)
                 history = history.sort((a, b) => a.messageTimestamp - b.messageTimestamp);
                 history.pop();
@@ -950,6 +950,35 @@ export default async function handleMessage(sock, msg, mongo) {
             return sendDonationMsg(msg.key.participant);
         }
         return sendDonationMsg(id);
+    }
+
+    // ##############
+    // DELETE SPAM (TEMP FIX)
+    // if the bot is admin in the group, and sender send spam msg
+    // the bot will delete the message and kick the sender
+    // ##############
+    if (isIncludeLink(textMsg) && textMsg.includes("השקעות") && (textMsg.includes("קבוצת") || textMsg.includes("קבוצה"))) {
+        if (msg.key.remoteJid.includes("@g.us")) {
+            let groupData = await GLOBAL.sock.groupMetadata(id);
+            let participant = groupData.participants;
+
+            // check if the bot is admin
+            let bot = participant.find(p => GLOBAL.sock.user.id.includes(p.id.slice(0, p.id.indexOf("@"))));
+            if (!bot?.admin) return;
+
+            // check if the sender is admin
+            let sender = participant.find(p => p.id === msg.key.participant);
+            if (sender.admin) return;
+
+            // delete message and kick sender
+            GLOBAL.sock.sendMessage(id, { delete: msg.key });
+            GLOBAL.sock.groupParticipantsUpdate(id, [msg.key.participant], "remove");
+            GLOBAL.sock.sendMessage(id, {
+                text: "זוהתה הודעה ספאם בקבוצה\n"
+                    + "המשתמש " + msg.key.participant.slice(0, msg.key.participant.indexOf("@")) + " הוסר מהקבוצה",
+                mentions: [msg.key.participant]
+            });
+        }
     }
 
     // ##############
