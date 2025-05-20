@@ -969,14 +969,14 @@ export default async function handleMessage(sock, msg, mongo) {
 
             // check if the sender is admin
             let sender = participant.find(p => p.id === msg.key.participant);
-            if (sender.admin) return;
+            if (sender?.admin) return;
 
             // delete message and kick sender
             await GLOBAL.sock.sendMessage(id, { delete: msg.key });
             await GLOBAL.sock.groupParticipantsUpdate(id, [msg.key.participant], "remove");
             await GLOBAL.sock.sendMessage(id, {
                 text: "זוהתה הודעה ספאם בקבוצה\n"
-                    + "המשתמש " + msg.key.participant.slice(0, msg.key.participant.indexOf("@")) + " הוסר מהקבוצה",
+                    + "המשתמש @" + msg.key.participant.slice(0, msg.key.participant.indexOf("@")) + " הוסר מהקבוצה",
                 mentions: [msg.key.participant]
             });
         }
