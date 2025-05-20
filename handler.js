@@ -958,6 +958,7 @@ export default async function handleMessage(sock, msg, mongo) {
     // the bot will delete the message and kick the sender
     // ##############
     if (isIncludeLink(textMsg) && textMsg.includes("השקעות") && (textMsg.includes("קבוצת") || textMsg.includes("קבוצה"))) {
+        console.log("spam detected");
         if (msg.key.remoteJid.includes("@g.us")) {
             let groupData = await GLOBAL.sock.groupMetadata(id);
             let participant = groupData.participants;
@@ -971,9 +972,9 @@ export default async function handleMessage(sock, msg, mongo) {
             if (sender.admin) return;
 
             // delete message and kick sender
-            GLOBAL.sock.sendMessage(id, { delete: msg.key });
-            GLOBAL.sock.groupParticipantsUpdate(id, [msg.key.participant], "remove");
-            GLOBAL.sock.sendMessage(id, {
+            await GLOBAL.sock.sendMessage(id, { delete: msg.key });
+            await GLOBAL.sock.groupParticipantsUpdate(id, [msg.key.participant], "remove");
+            await GLOBAL.sock.sendMessage(id, {
                 text: "זוהתה הודעה ספאם בקבוצה\n"
                     + "המשתמש " + msg.key.participant.slice(0, msg.key.participant.indexOf("@")) + " הוסר מהקבוצה",
                 mentions: [msg.key.participant]
