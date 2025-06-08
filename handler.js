@@ -1184,7 +1184,7 @@ function sendCommandsList(jid) {
     // info about the bot
     text += "*!אודות:* _לקבלת מידע על הבוט_\n";
 
-    text += "\nלקריאת כל הפקודות בצורה נוחה: tinyurl.com/babibot"
+    text += "\nלקריאת כל הפקודות בצורה נוחה: https://bit.ly/babibot"
 
     return sendMsgQueue(jid, text);
 }

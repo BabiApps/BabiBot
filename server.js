@@ -123,7 +123,7 @@ async function connectToWhatsApp() {
                 text: "היי! אני באבי בוט 😃\n"
                     + "שלחו לי את המילה '!פקודות' והתחילו להנות!\n\n"
                     + "(לידעתכם ההודעות שתשלחו לבוט אינן חסויות ויש למפתח גישה לראותן, השימוש בבוט מהווה את הסכמתכם לכך)\n\n"
-                    + "כל הפקודות --> tinyurl.com/babibot"
+                    + "כל הפקודות --> https://bit.ly/babibot"
             });
         }
     })

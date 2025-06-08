@@ -15,7 +15,7 @@ Ensure your system meets the following requirements before proceeding with Babi 
 To download Babi Bot, you can clone the repository from GitHub using the following command:
 
 ```bash
-git clone https://github.com/ZeANi-SHILIX/BabiBot.git
+git clone https://github.com/BabiApps/BabiBot.git
 ```
 
 
@@ -78,7 +78,7 @@ node server.js
 
 ## Additional Resources
 
-For detailed instructions on how to access and use each feature of Babi Bot, visit the [Babi Bot website](https://zeani-shilix.github.io/BabiBot/)
+For detailed instructions on how to access and use each feature of Babi Bot, visit the [Babi Bot website](https://babiapps.github.io/BabiBot/)
 
 
 

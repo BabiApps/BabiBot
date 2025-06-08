@@ -2,30 +2,60 @@
 <html lang="he">
 
 <head>
-  <title>מידע על פקודות בוט WhatsApp - Information about the bot commands</title>
+  <title>BabiBot - פקודות</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #F6F8FA;
+      font-family: 'Heebo', sans-serif;
+      /* שימוש בפונט Heebo */
+      margin: 0;
+      background-color: #f0f2f5;
+      /* גוון אפור בהיר */
       display: flex;
+      min-height: 100vh;
+      color: #333;
     }
 
+    /* עיצוב כללי */
     h1 {
-      color: #333;
+      color: #2c3e50;
+      /* כחול כהה */
       text-align: center;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+      font-weight: 700;
     }
 
     h2 {
+      color: #34495e;
+      /* כחול כהה יותר */
+      margin-top: 40px;
+      margin-bottom: 15px;
+      font-size: 1.8em;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+
+    h3 {
       color: #555;
-      margin-top: 20px;
+      margin-top: 25px;
+      margin-bottom: 10px;
+      font-size: 1.4em;
+    }
+
+    p {
+      line-height: 1.6;
+      margin-bottom: 10px;
     }
 
     pre {
-      background-color: #EAEAEA;
-      padding: 10px;
-      border-radius: 4px;
+      background-color: #e8f5e9;
+      /* ירוק בהיר מאוד */
+      padding: 15px;
+      border-radius: 8px;
       overflow-x: auto;
+      font-family: 'Courier New', Courier, monospace;
+      border: 1px solid #d4edda;
     }
 
     ul {
@@ -34,296 +64,422 @@
     }
 
     li {
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
-    .notes {
-      color: #555;
-      font-size: 14px;
+    a {
+      color: #3498db;
+      /* כחול */
+      text-decoration: none;
+      transition: color 0.3s ease;
     }
 
-    .parameters {
-      color: #555;
-      font-size: 14px;
+    a:hover {
+      color: #2980b9;
+      /* כחול כהה יותר במעבר עכבר */
     }
 
-    .command {
-      margin-bottom: 30px;
-      background-color: #FFFFFF;
-      border-radius: 4px;
-      padding: 20px;
-      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    /* מבנה העמוד */
+    .container {
+      display: flex;
+      width: 100%;
+      max-width: 1200px;
+      margin: 20px auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
     }
 
-    .command h2 {
-      color: #007BFF;
-      font-size: 24px;
-      margin-bottom: 10px;
+    /* תפריט צדדי */
+    .command-menu {
+      width: 250px;
+      padding: 30px 20px;
+      background-color: #2c3e50;
+      /* כחול כהה לתפריט */
+      color: #ecf0f1;
+      /* לבן אפרפר */
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
     }
 
-    .command p {
-      color: #333;
-      font-size: 16px;
+    .command-menu h2 {
+      color: #ecf0f1;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
     }
 
-    .command h3 {
-      color: #555;
-      margin-top: 15px;
-    }
-
-    .command pre {
-      background-color: #F0F0F0;
-      font-size: 14px;
-    }
-
-    .command ul {
-      margin-top: 10px;
-    }
-
-    .command li {
-      font-size: 14px;
-    }
-
-    .index {
-      background-color: #FFFFFF;
-      border-radius: 4px;
-      padding: 20px;
-      box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-      min-width: 200px;
-      margin-right: 20px;
-    }
-
-    .index ul {
-      margin: 0;
+    .command-menu ul {
+      list-style-type: none;
       padding: 0;
     }
 
-    .index li {
-      margin-bottom: 10px;
-      list-style-type: none;
-    }
-
-    .index a {
-      color: #007BFF;
+    .command-menu li a {
+      display: block;
+      padding: 10px 15px;
+      color: #ecf0f1;
       text-decoration: none;
+      border-radius: 5px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .command-menu li a:hover {
+      background-color: #3498db;
+      color: #ffffff;
+    }
+
+    /* תוכן ראשי */
+    .main-content {
+      flex-grow: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    /* כותרת הדף העליונה */
+    .page-header {
+      padding: 20px;
+      background-color: #3498db;
+      /* כחול */
+      color: #ffffff;
+      text-align: center;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-header h1 {
+      color: #ffffff;
+      margin: 0;
+    }
+
+    /* פקודות בודדות */
+    .command {
+      margin-bottom: 40px;
+      background-color: #fdfdfd;
+      border-radius: 8px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .command:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .command h3 {
+      font-size: 1.6em;
+      color: #2980b9;
+      /* כחול כהה יותר */
+      margin-top: 0;
+      border-bottom: 1px dashed #cccccc;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    .command-section p {
+      margin-bottom: 5px;
+    }
+
+    .command-section ul {
+      margin-top: 5px;
+      margin-bottom: 10px;
+    }
+
+    .notes,
+    .parameters {
+      color: #666;
+      font-size: 0.95em;
+      background-color: #f7f7f7;
+      border-left: 4px solid #f39c12;
+      /* כתום */
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+    }
+
+    .notes strong,
+    .parameters strong {
+      color: #e67e22;
+      /* כתום כהה יותר */
+    }
+
+    /* בורר שפה */
+    .lang-selector {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 15px;
+      background-color: #ecf0f1;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .lang-selector label {
       font-weight: bold;
+      margin-right: 10px;
+      color: #2c3e50;
     }
 
-    .index a:hover {
-      text-decoration: underline;
+    .lang-selector select {
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      background-color: #ffffff;
+      font-size: 1em;
+      cursor: pointer;
+      transition: border-color 0.3s ease;
     }
 
-    .content {
-      margin-right: 20px;
+    .lang-selector select:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    /* מידע פרטיות */
+    #privacyNote {
+      margin-top: 50px;
+      padding: 25px;
+      background-color: #fdf6e3; /* צהוב בהיר מאוד */
+      border-radius: 8px;
+      border: 1px solid #fae3bf;
+      color: #725114;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      /* הוספות לטיפול בגלישת טקסט */
+      word-wrap: break-word; /* שובר מילים ארוכות שלא נכנסות */
+      overflow-wrap: break-word; /* גרסה מודרנית יותר של word-wrap */
+      text-align: right; /* יישור לימין, במידה וזה משפר קריאות בעברית */
+    }
+
+    #privacyNote h2 {
+      color: #d35400; /* כתום חזק יותר */
+      border-bottom-color: #f39c12;
+    }
+
+    /* יישור הטקסט של הפסקה בתוך אזור הפרטיות */
+    #privacyNote p {
+        text-align: right; /* וודא שהטקסט בתוך הפסקה גם מיושר לימין */
+        line-height: 1.6; /* שיפור רווח שורות לקריאות טובה יותר */
+    }
+
+    /* רספונסיביות בסיסית */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+        margin: 10px;
+      }
+
+      .command-menu {
+        width: 100%;
+        padding: 20px 15px;
+        box-shadow: none;
+        border-bottom: 2px solid #3498db;
+      }
+
+      .main-content {
+        padding: 20px 15px;
+      }
+
+      .page-header h1 {
+        font-size: 2em;
+      }
+
+      h2 {
+        font-size: 1.5em;
+      }
+
+      .command h3 {
+        font-size: 1.4em;
+      }
     }
   </style>
 </head>
 
 <body>
-  <div class="index">
-    <h2 id="commandMenuTitle">פקודות:</h2>
-    <ul id="commandsHerfs">
-    </ul>
+  <div class="container">
+    <aside class="command-menu">
+      <h2 id="commandMenuTitle">פקודות:</h2>
+      <ul id="commandList">
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1 id="pageTitle">BabiBot - פקודות</h1>
+      </div>
+
+      
+
+      <div class="lang-selector">
+        <label for="lang">בחר שפה:</label>
+        <select id="lang" onchange="changeLang()">
+          <option value="iw">עברית</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      
+      <section id="privacyNote">
+        <h2>פרטיות</h2>
+        <p>שימו לב! למפתח של BabiBot קיימת גישה להודעות שתשלחו לבוט, ההודעות נבדקות מפעם לפעם על מנת לשפר ולתקן את הבוט.
+        </p>
+      </section>
+
+      <h2 id="commandsTitle">פקודות:</h2>
+
+      <section id="commandsContainer">
+      </section>
+
+      <section id="donationSection">
+        <h2>תמיכה בפיתוח הבוט</h2>
+        <p>אם אתם אוהבים את BabiBot ורוצים לתמוך בפיתוחו ובשמירה על פעולתו, אתם מוזמנים לתרום באמצעות הכפתור למטה. כל תרומה, קטנה כגדולה, עוזרת לנו לשמור על הבוט פעיל, לשפר את יכולותיו ולהוסיף פקודות חדשות!</p>
+        <div class="bmc-button-container">
+          <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
+            data-name="bmc-button"
+            data-slug="BabiBot"
+            data-color="#3498db"
+            data-emoji="💙"
+            data-font="Heebo"
+            data-text="תמכו ב-BabiBot"
+            data-outline-color="#000000"
+            data-font-color="#FFFFFF"
+            data-coffee-color="#ffffff"
+            data-btn-color="#3498db"
+            data-url="https://www.buymeacoffee.com/BabiBot"
+            style="width: fit-content; margin: 20px auto; display: block;"
+          ></script>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <div class="content">
-    <select id="lang" onchange="changeLang()">
-      <option value="iw" selected>עברית</option>
-      <option value="en">English</option>
-    </select>
+  <script type="module" src="commands.js"></script>
+  <script type="module">
+    import { AllCommands, keyNotes } from './commands.js';
 
-    <h1 id="pageTitle">BabiBot - פקודות</h1>
+    window.AllCommands = AllCommands; // Make AllCommands accessible globally
+    window.keyNotes = keyNotes; // Make keyNotes accessible globally
 
-    <div >
-      <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
-        data-name="bmc-button" data-slug="BabiBot" data-color="#FFDD00" data-emoji="☕" data-font="Bree"
-        data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000"
-        data-coffee-color="#ffffff"></script>
-    </div>
-
-    <div class="privacy" id="privacyNote">
-      <h2>פרטיות</h2>
-      <p>שימו לב! למפתח של BabiBot קיימת גישה להודעות שתשלחו לבוט, ההודעות נבדקות מפעם לפעם על מנת לשפר ולתקן את הבוט.
-      </p>
-    </div>
-
-    <div id="commands"></div>
-
-  </div>
-</body>
-
-<script type="module">
-  import { AllCommands, keyNotes } from "./commands.js";
-
-  /**
-   * 
-   * @param {AllCommands[lang][index]} command
-   * @param {string} lang
-   * @returns {HTMLDivElement}
-   */
-  function generateCommandDiv(command, lang) {
-
-    let div = document.createElement("div");
-    div.classList.add("command");
-    div.id = "command-" + command.name.replace("!", "");
-    let h2 = document.createElement("h2");
-    h2.innerText = command.name;
-    div.appendChild(h2);
-    let p = document.createElement("p");
-    p.innerText = command.description;
-    div.appendChild(p);
-    let h3 = document.createElement("h3");
-    h3.innerText = keyNotes[lang].usage;
-    div.appendChild(h3);
-    let pre = document.createElement("pre");
-    pre.innerText = command.usage;
-    div.appendChild(pre);
-    if (command.parameters) {
-      h3 = document.createElement("h3");
-      h3.innerText = keyNotes[lang].parameters;
-      div.appendChild(h3);
-      let ul = document.createElement("ul");
-      ul.classList.add("parameters");
-      command.parameters.forEach(parameter => {
-        let li = document.createElement("li");
-        li.innerHTML = "<strong>" + parameter.name + ":</strong> " + parameter.description;
-        ul.appendChild(li);
-      });
-      div.appendChild(ul);
-    }
-    h3 = document.createElement("h3");
-    h3.innerText = keyNotes[lang].examples;
-    div.appendChild(h3);
-    command.examples.forEach(example => {
-      pre = document.createElement("pre");
-      pre.innerText = example;
-      div.appendChild(pre);
-    }
-    );
-    h3 = document.createElement("h3");
-    h3.innerText = keyNotes[lang].response;
-    div.appendChild(h3);
-    p = document.createElement("p");
-    p.innerText = command.response;
-    div.appendChild(p);
-    if (command.notes) {
-      h3 = document.createElement("h3");
-      h3.innerText = keyNotes[lang].notes;
-      div.appendChild(h3);
-      let ul = document.createElement("ul");
-      ul.classList.add("notes");
-      command.notes.forEach(note => {
-        let li = document.createElement("li");
-        li.innerText = " ● " + note;
-        ul.appendChild(li);
-      });
-      div.appendChild(ul);
-    }
-    return div;
-  }
-
-  /**
-   * only for testing
-   * @param {HTMLDivElement} div
-   */
-  function fromDivTolist(div) {
-    let list = [];
-    let commands = div.querySelectorAll(".command");
-    console.log(commands);
-    commands.forEach(command => {
-      let name = command.querySelector("h2").innerText;
-      let description = command.querySelector("p").innerText;
-
-      let usage = command.querySelector("pre").innerText;
-      let parameters = [];
-      let parametersList = command.querySelectorAll("ul li");
-      parametersList.forEach(parameter => {
-        let name = parameter.querySelector("strong")?.innerText;
-        let description = parameter.innerText.replace(name + ": ", "");
-        parameters.push({
-          "name": name,
-          "description": description
-        });
-      });
-      let examples = [];
-      let examplesList = command.querySelectorAll("h3 + pre");
-      examplesList.forEach(example => {
-        examples.push(example.innerText);
-      });
-      let response = command.querySelector("h3 + p").innerText;
-      let notes = [];
-      let notesList = command.querySelectorAll("h3 + ul li");
-      notesList.forEach(note => {
-        notes.push(note.innerText);
-      });
-      list.push({
-        "name": name,
-        "description": description,
-        "usage": usage,
-        "parameters": parameters,
-        "examples": examples,
-        "response": response,
-        "notes": notes
-      });
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set initial language based on URL or default to Hebrew
+      const urlParams = new URLSearchParams(window.location.search);
+      const langParam = urlParams.get('lang');
+      const initialLang = langParam === 'en' ? 'en' : 'iw';
+      document.getElementById('lang').value = initialLang;
+      reloadPageWithLang(initialLang);
     });
-    return list;
-  }
-  function generateCommands() {
-    let div = document.getElementById("commands");
-    console.log(div);
-    let list = fromDivTolist(div);
-    div.innerHTML = "";
-    console.log(JSON.stringify(list, null, 2));
-    for (let i = 0; i < list.length; i++) {
-      let newDiv = generateCommandDiv(list[i], "iw");
-      console.log(newDiv);
-      document.getElementById("commands").appendChild(newDiv);
+
+    window.reloadPageWithLang = (lang) => {
+      // change the layout direction
+      if (lang == "iw") {
+        window.document.dir = "rtl";
+        document.getElementById("commandMenuTitle").innerHTML = "פקודות:";
+        document.getElementById("pageTitle").innerHTML = "BabiBot - פקודות";
+        document.getElementById("privacyNote").innerHTML = `<h2>פרטיות</h2>
+        <p>שימו לב! למפתח של BabiBot קיימת גישה להודעות שתשלחו לבוט, ההודעות נבדקות מפעם לפעם על מנת לשפר ולתקן את הבוט.</p>`;
+      }
+      else {
+        window.document.dir = "ltr";
+        document.getElementById("commandMenuTitle").innerHTML = "Commands:";
+        document.getElementById("pageTitle").innerHTML = "BabiBot - Commands";
+        document.getElementById("privacyNote").innerHTML = `<h2>Privacy</h2>
+        <p>Attention! The developer of BabiBot has access to the messages you send to the bot. The messages are periodically reviewed in order to improve and correct the bot.</p>`;
+      }
+
+      // Clear existing content
+      const commandsContainer = document.getElementById('commandsContainer');
+      commandsContainer.innerHTML = '';
+      const commandList = document.getElementById('commandList');
+      commandList.innerHTML = '';
+
+
+      // Populate commands
+      if (AllCommands[lang]) {
+        AllCommands[lang].forEach(command => {
+          // Add to command menu
+          commandList.innerHTML += `<li><a href='#command-${command.name.replace("!", "")}'>${command.name}</a></li>`;
+
+          // Add command details
+          let commandHtml = `
+            <div id="command-${command.name.replace("!", "")}" class="command">
+              <h3>${command.name}</h3>
+              <div class="command-section">
+                <h4>${keyNotes[lang].description}</h4>
+                <p>${command.description}</p>
+              </div>
+              <div class="command-section">
+                <h4>${keyNotes[lang].usage}</h4>
+                <pre>${command.usage}</pre>
+              </div>
+          `;
+
+          if (command.parameters && command.parameters.length > 0) {
+            commandHtml += `
+              <div class="command-section parameters">
+                <h4>${keyNotes[lang].parameters}</h4>
+                <ul>
+            `;
+            command.parameters.forEach(param => {
+              commandHtml += `<li><strong>${param.name}:</strong> ${param.description}</li>`;
+            });
+            commandHtml += `
+                </ul>
+              </div>
+            `;
+          }
+
+          if (command.examples && command.examples.length > 0) {
+            commandHtml += `
+              <div class="command-section">
+                <h4>${keyNotes[lang].examples}</h4>
+                <ul>
+            `;
+            command.examples.forEach(example => {
+              commandHtml += `<li><pre>${example}</pre></li>`;
+            });
+            commandHtml += `
+                </ul>
+              </div>
+            `;
+          }
+
+          commandHtml += `
+              <div class="command-section">
+                <h4>${keyNotes[lang].response}</h4>
+                <p>${command.response}</p>
+              </div>
+          `;
+
+          if (command.notes && command.notes.length > 0) {
+            commandHtml += `
+              <div class="command-section notes">
+                <h4>${keyNotes[lang].notes}</h4>
+                <ul>
+            `;
+            command.notes.forEach(note => {
+              commandHtml += `<li>${note}</li>`;
+            });
+            commandHtml += `
+                </ul>
+              </div>
+            `;
+          }
+
+          commandHtml += `</div>`;
+          commandsContainer.innerHTML += commandHtml;
+        });
+      }
+    };
+
+    window.changeLang = () => {
+      let lang = document.getElementById("lang").value;
+      console.log("lang set to: " + lang); // "iw" or "en
+      reloadPageWithLang(lang);
+      // Update URL without reloading page
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('lang', lang);
+      window.history.pushState({ path: newUrl.href }, '', newUrl.href);
     }
-  }
-  // generateCommands();
-
-  function reloadPageWithLang(lang) {
-    document.getElementById("commands").innerHTML = "";
-    document.getElementById("commandsHerfs").innerHTML = "";
-    for (let i = 0; i < AllCommands[lang].length; i++) {
-      let newDiv = generateCommandDiv(AllCommands[lang][i], lang);
-      document.getElementById("commands").appendChild(newDiv);
-      document.getElementById("commandsHerfs").innerHTML += "<li><a href='#command-" + AllCommands[lang][i].name.replace("!", "") + "'>" + AllCommands[lang][i].name + "</a></li>";
-    }
-  }
-
-  function changeLang() {
-    // get selected lang
-    let lang = document.getElementById("lang").value;
-    console.log("lang set to: " + lang); // "iw" or "en
-    // reload page with the selected lang
-    reloadPageWithLang(lang);
-
-    // change the layout direction
-    if (lang == "iw") {
-      window.document.dir = "rtl";
-      document.getElementById("commandMenuTitle").innerHTML = "פקודות:";
-      document.getElementById("pageTitle").innerHTML = "BabiBot - פקודות"
-      document.getElementById("privacyNote").innerHTML = `<h2>פרטיות</h2>
-      <p>שימו לב! למפתח של BabiBot קיימת גישה להודעות שתשלחו לבוט, ההודעות נבדקות מפעם לפעם על מנת לשפר ולתקן את הבוט.</p>`
-    }
-    else {
-      window.document.dir = "ltr";
-      document.getElementById("commandMenuTitle").innerHTML = "Commands:";
-      document.getElementById("pageTitle").innerHTML = "BabiBot - Commands"
-      document.getElementById("privacyNote").innerHTML = `<h2>Privacy</h2>
-      <p>Attention! The developer of BabiBot has access to the messages you send to the bot. The messages are periodically reviewed in order to improve and correct the bot.</p>`
-    }
-
-
-  }
-
-  // onload set the lang to the default lang
-  changeLang();
-
-  // save the function in the window object so it can be called from the html
-  window.changeLang = changeLang;
-
-</script>
+  </script>
+</body>
 
 </html>
