@@ -57,6 +57,8 @@ export class MemoryStore {
             this.#currentPart = this.#getNextPart();
             this.#saveCurrentPartNumber();
             // clear the store
+            
+            if (!this.store.messages) return;
             for (const id of Object.keys(this.store.messages)) {
                 this.store.messages[id].clear();
             }
