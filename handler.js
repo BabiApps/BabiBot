@@ -649,7 +649,7 @@ export default async function handleMessage(sock, msg, mongo) {
     if (textMsg.includes("תודה")) {
         let numberSocket = sock.user.id.slice(0, sock.user.id.indexOf(":"));
         // Check if replied to the bot.
-        if (msg.message.extendedTextMessage?.contextInfo?.participant.startsWith(numberSocket)) {
+        if (msg.message.extendedTextMessage?.contextInfo?.participant?.startsWith(numberSocket)) {
             return sendMsgQueue(id, "בשמחה! תמיד שמח לעזור🤗")
         }
     }
