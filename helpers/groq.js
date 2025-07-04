@@ -133,7 +133,7 @@ export default class GroqAPI {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "llama3-70b-8192",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: "אתה עוזר מועיל שמסכם טקסטים בצורה תמציתית וברורה." },
           { role: "user", content: `צור סיכום קצר של ההקלטה הבאה:\n\n${text}` }
@@ -229,7 +229,7 @@ export default class GroqAPI {
     }
 
     let data = {
-      "model": "llama3-70b-8192",
+      "model": "llama-3.3-70b-versatile",
       "messages": [
         {
           role: "system",
