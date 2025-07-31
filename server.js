@@ -50,8 +50,6 @@ async function connectToWhatsApp() {
     console.log('version', version.join("."), 'isLatest', isLatest)
     /** @type {import('@adiwajshing/baileys').WASocket} */
     const sock = makeWASocket.default({
-        // can provide additional config here
-        printQRInTerminal: true,
         auth: {
             creds: state.creds,
             keys: state.keys,
@@ -220,6 +218,9 @@ async function connectToWhatsApp() {
                 if (proType == proto.Message.ProtocolMessage.Type.REVOKE ||
                     proType == proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
                     continue;
+                
+                // avoid handling any protocol messages
+                if (msg.message?.protocolMessage) continue;
 
                 handlerQueue.add(() => handleMessage(sock, msg, mongo));
 
