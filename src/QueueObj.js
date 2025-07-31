@@ -1,6 +1,5 @@
 import PQueue from 'p-queue';
 import { GLOBAL } from './storeMsg.js';
-import messageRetryHandler from './retryHandler.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -9,7 +8,7 @@ dotenv.config();
  * to use: `handlerQueue.add(() => { })`
  */
 export const handlerQueue = new PQueue({
-    concurrency: 5,
+    concurrency: 10,
     interval: 100 // 0.1s
 });
 //queue.add(() => { });
@@ -40,7 +39,7 @@ export const TYQueue = new PQueue({
  * @param {string} text
  */
 export function sendMsgQueue(jid, text) {
-    return msgQueue.add(async () => await GLOBAL.sock.sendMessage(jid, { text }).then(messageRetryHandler.addMessage));
+    return msgQueue.add(async () => await GLOBAL.sock.sendMessage(jid, { text }));
 }
 
 /**
@@ -50,7 +49,7 @@ export function sendMsgQueue(jid, text) {
  * @param {import("@adiwajshing/baileys/lib/Types").MiscMessageGenerationOptions} options
  */
 export function sendCustomMsgQueue(jid, content, options = {}) {
-    return msgQueue.add(async () => await GLOBAL.sock.sendMessage(jid, content, options).then(messageRetryHandler.addMessage));
+    return msgQueue.add(async () => await GLOBAL.sock.sendMessage(jid, content, options));
 }
 
 /**
@@ -62,9 +61,8 @@ export async function errorMsgQueue(text) {
     //const botNum = GLOBAL.sock.user?.id?.split("@")[0].split(":")[0] + "@s.whatsapp.net";
     const superuserNum = process.env.SUPERUSER + "@s.whatsapp.net";
     try {
-        return await msgQueue.add(async () => await GLOBAL.sock.sendMessage(superuserNum, { text })
-            .then(messageRetryHandler.addMessage));
+        return await msgQueue.add(async () => await GLOBAL.sock.sendMessage(superuserNum, { text }));
     } catch {
-        console.error("errorMsgQueue: failed to send error message to superuser");
+        console.error("errorMsgQueue: failed to send error message to superuser " + process.env.SUPERUSER);
     }
 }
