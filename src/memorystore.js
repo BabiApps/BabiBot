@@ -183,4 +183,4 @@ function getServerLoad() {
     }
 }
 
-export default new MemoryStore(3, 2);
+export default new MemoryStore(3, 6);
