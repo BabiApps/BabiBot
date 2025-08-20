@@ -218,7 +218,7 @@ async function connectToWhatsApp() {
                 if (proType == proto.Message.ProtocolMessage.Type.REVOKE ||
                     proType == proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
                     continue;
-                
+
                 // avoid handling any protocol messages
                 if (msg.message?.protocolMessage) continue;
 
@@ -261,8 +261,13 @@ app.get('/qr', async (req, res) => {
 })
 
 app.get('/', (req, res) => {
-    res.sendFile(process.cwd() + '/index.html');
-    //res.send('Hello World! its Babi Bot')
+    try {
+        res.sendFile(process.cwd() + '/index.html');
+    } catch (error) {
+        console.error("Error sending index.html:", error);
+        res.status(500).send("Internal Server Error");
+    }
+    res.send('Hello World! its Babi Bot')
 });
 
 
@@ -390,7 +395,7 @@ app.get('/send', async (req, res) => {
 });
 
 
-app.listen(port, () => {
+app.listen(port, "0.0.0.0", () => {
     console.log(`WaAPI app listening at http://localhost:${port}`)
     console.log(`QR at http://localhost:${port}/qr`)
 });
