@@ -45,8 +45,8 @@ export function sendMsgQueue(jid, text) {
 /**
  * 
  * @param {string} jid
- * @param {import("@adiwajshing/baileys/lib/Types").AnyMessageContent} content
- * @param {import("@adiwajshing/baileys/lib/Types").MiscMessageGenerationOptions} options
+ * @param {import("baileys/lib/Types").AnyMessageContent} content
+ * @param {import("baileys/lib/Types").MiscMessageGenerationOptions} options
  */
 export function sendCustomMsgQueue(jid, content, options = {}) {
     return msgQueue.add(async () => await GLOBAL.sock.sendMessage(jid, content, options));

@@ -4,11 +4,10 @@ const PRODUCTION = process.env.NODE_ENV === 'production';
 PRODUCTION ? null : process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
 
 import { errorMsgQueue, sendCustomMsgQueue, sendMsgQueue } from '../../src/QueueObj.js';
-import { downloadMediaMessage } from '@adiwajshing/baileys';
+import { downloadMediaMessage } from 'baileys';
 import didYouMean from 'didyoumean2';
 import fetch from 'node-fetch';
 import fs from 'fs';
-import e from 'express';
 
 const url_begin = 'https://docs.google.com/spreadsheets/d/';
 const url_end = '/gviz/tq?&tqx=out:json';
@@ -429,7 +428,7 @@ function loadMailsListFromFile() {
 }
 /**
  * 
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
  */
 export async function downloadFileAsPDF(msg, customName) {
     let filename = msg.message?.documentMessage?.fileName || msg.message?.documentWithCaptionMessage.message?.documentMessage?.fileName;

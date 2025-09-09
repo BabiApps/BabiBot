@@ -34,7 +34,7 @@ const DLBaseURLS = [
 
 /**
  *
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').proto.WebMessageInfo} msg
  */
 export async function DownloadV2(msg) {
     const id = msg.key.remoteJid;

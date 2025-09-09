@@ -89,7 +89,7 @@ Information.prototype.deleteYouTubeProgress = function (userID) {
 /**
  * count emoji reactions on a message in a group
  * saving the id of user who reacted
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').proto.WebMessageInfo} msg
  * @returns {{reactionsCount: number,minToMute: number,startTime: number} | undefined} 
  */
 Information.prototype.reactionsOnSavedMsg = function (msg) {
@@ -125,7 +125,7 @@ Information.prototype.reactionsOnSavedMsg = function (msg) {
 
 /**
  * create a data structure to save the reactions on a message
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg - bot message
+ * @param {import('baileys').proto.WebMessageInfo} msg - bot message
  * @param {Number} minToMute - the number of minutes to mute the group
  */
 Information.prototype.makeReactionMsg = function (msg, minToMute) {
@@ -149,7 +149,7 @@ Information.prototype.makeReactionMsg = function (msg, minToMute) {
 
 /**
  * delete a data structure to save the reactions on a message
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg - reaction message
+ * @param {import('baileys').proto.WebMessageInfo} msg - reaction message
  */
 Information.prototype.deleteReactionMsg = function (msg) {
     let idGroup = msg.key.remoteJid;
@@ -189,7 +189,7 @@ Information.prototype.deleteAllReactionMsg = function (idGroup) {
 /**
  * if the user is in a dialog with the bot
  * allow him to set settings for the group
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').proto.WebMessageInfo} msg
  * @returns {Number | undefined} ```undefined``` user without dialog. ```-1``` error, otherwise return the stage of the dialog (step 3 - finished)
  */
 Information.prototype.setSettingDialog = function (msg) {
@@ -261,7 +261,7 @@ Information.prototype.setSettingDialog = function (msg) {
  * stage 0: set count user to mute
  * stage 1: set spam message
  * stage 2: apply settings
- * @param {import ('@adiwajshing/baileys').proto.WebMessageInfo} msg
+ * @param {import ('baileys').proto.WebMessageInfo} msg
 */
 Information.prototype.startDialog = function (msg) {
     let idGroup = msg.key.remoteJid;

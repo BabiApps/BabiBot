@@ -1,10 +1,9 @@
-import e from "express";
 import fs from "fs";
 
-/** @type {import('@adiwajshing/baileys').WASocket} */
+/** @type {import('baileys').WASocket} */
 let tempSock;
 
-/** @type {import('./memorystore').MemoryStore} */
+/** @type {import("baileys-bottle-devstroupe/lib/bottle/StoreHandle").default} */
 let tempStore;
 
 /** @type {{[jid:string]: {"messageID": {reactionsCount: number,minToMute: number, startTime: number}}}}*/
@@ -51,7 +50,7 @@ let tempQuizLev = {};
 
 export const GLOBAL = {
     sock: tempSock, // updating when reconnecting (server.js)
-    store: tempStore,
+    store: tempStore, // updating when reconnecting (server.js)
     muteGroup: tempMuteGroup,
     groupConfig: tempGroupConfig,
     userConfig: tempUserConfig,
@@ -169,7 +168,7 @@ function readConfig() {
         const data = fs.readFileSync("./savedConfig.json");
         try {
             tempConfig = JSON.parse(data);
-            console.log(tempConfig);
+            console.log("Config file loaded");
         } catch (error) {
             tempConfig = {};
             console.log("Error in parsing the savedConfig.json file");

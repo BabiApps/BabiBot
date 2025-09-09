@@ -17,3 +17,7 @@ MemoryStore
 helpers/jct/all_courses_blocked_and_blocks_info.json
 helpers/jct/mails.json
 youtubeDL
+qr_code.png
+auth_info_babibot
+BabiBotCreds.json
+db.sqlite

@@ -1,9 +1,9 @@
 import fs from "fs";
 import { sendMsgQueue } from "../src/QueueObj.js";
-import { downloadMediaMessage } from "@adiwajshing/baileys";
+import { downloadMediaMessage } from "baileys";
 import { getMsgType, MsgType } from "./msgType.js";
-import MemoryStore from "../src/memorystore.js";
 import dotenv from 'dotenv';
+import { GLOBAL } from "../src/storeMsg.js";
 dotenv.config();
 
 export default class GroqAPI {
@@ -152,7 +152,7 @@ export default class GroqAPI {
   }
 
   /**
-   * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
+   * @param {import('baileys').proto.WebMessageInfo} msg 
    */
   async stt(msg) {
     const id = msg.key.remoteJid;
@@ -168,10 +168,10 @@ export default class GroqAPI {
       }
 
       // get from store
-      quotedMsg = await MemoryStore.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
+      quotedMsg = await GLOBAL.store.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
       if (!quotedMsg) {
         await sleep(2000);
-        quotedMsg = await MemoryStore.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
+        quotedMsg = await GLOBAL.store.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
       }
       if (!quotedMsg) {
         return sendMsgQueue(id, "ההודעה המצוטטת לא נמצאה, נסה לשלוח את הפקודה שוב בעוד כמה שניות")

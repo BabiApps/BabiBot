@@ -23,8 +23,7 @@ export default class Mongo {
 
     mongoose.connect(this.connectionString, {
       useNewUrlParser: true,
-      ssl: true,
-      sslValidate: false
+      ssl: true
     })
 
     this.connection.once("open", () => {

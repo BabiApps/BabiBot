@@ -1,20 +1,20 @@
-import { downloadMediaMessage } from '@adiwajshing/baileys';
+import { downloadMediaMessage } from 'baileys';
 import pkg from 'wa-sticker-formatter';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import ffmpeg from 'fluent-ffmpeg';
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 import { UltimateTextToImage, registerFont, getCanvasImage } from "ultimate-text-to-image";
 import { MsgType, getMsgType } from './msgType.js';
-import MemoryStore from '../src/memorystore.js';
 import { sendMsgQueue, errorMsgQueue, sendCustomMsgQueue } from '../src/QueueObj.js';
 //import { transparentBackground } from "transparent-background";
-import Jimp from "jimp";
+/*** enable or disable the remove background feature (can take up to 3 minutes on low-spec servers) */
+const enableRemoveBackground = false;
+import { Jimp } from "jimp";
 import sharp from 'sharp';
+import { GLOBAL } from '../src/storeMsg.js';
 
 const { Sticker, StickerTypes } = pkg;
 
-/*** enable or disable the remove background feature (can take up to 3 minutes on low-spec servers) */
-const enableRemoveBackground = true;
 
 const parameters = {
     colors: [
@@ -168,7 +168,7 @@ registerFonts();
 
 /**
  * 
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
  */
 export default async function sendSticker(msg) {
     let id = msg.key.remoteJid;
@@ -184,11 +184,11 @@ export default async function sendSticker(msg) {
     // get the quoted message
     // if can't get it - send to the user a message
     if (msg.message?.extendedTextMessage?.contextInfo?.stanzaId) {
-        let quoted = await MemoryStore.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+        let quoted = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
         if (!quoted) {
             console.log("retrying to get quoted message in 3 seconds...")
             await sleep(3000)
-            quoted = await MemoryStore.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+            quoted = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
         }
         if (!quoted) return sendMsgQueue(id, "אופס... לא מצאתי את ההודעה שציטטת\nנסה לצטט שוב בעוד כמה שניות")
 
@@ -250,7 +250,7 @@ async function makeTextSticker(id, quotedText, commandText) {
 
 /**
  * 
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').proto.WebMessageInfo} msg
  * @param {String} commandText
  * 
  */

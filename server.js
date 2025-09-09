@@ -1,19 +1,18 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import { Canvas } from 'canvas'; // fix on windows (canvas needs to imported first)
-import makeWASocket, { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, getAggregateVotesInPollMessage } from '@adiwajshing/baileys';
-import pkg from '@adiwajshing/baileys/WAProto/index.js';
-const { proto } = pkg;
+import makeWASocket, { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, getAggregateVotesInPollMessage } from 'baileys';
+// Import baileys-bottle - now properly built for ESM
+import BaileysBottle from 'baileys-bottle-devstroupe';
+import { proto } from 'baileys/WAProto/index.js';
 import bodyParser from 'body-parser';
 import express from 'express';
 import QRCode from 'qrcode';
 import Mongo from './mongo.js';
 import { errorMsgQueue, handlerQueue } from './src/QueueObj.js';
 import { GLOBAL } from './src/storeMsg.js';
-import MemoryStore from './src/memorystore.js';
-//import jwt from 'jsonwebtoken';
+import { pino } from "pino";
 import handleMessage from './handler.js';
-//import messageRetryHandler from "./src/retryHandler.js";
 
 const msgRetryCounterMap = {};
 
@@ -32,218 +31,236 @@ app.use(bodyParser.json());
 const mongo = new Mongo();
 
 const getMessage = async (key) => {
-    if (MemoryStore) {
-        const msg = await MemoryStore.loadMessage(key.remoteJid, key.id)
+    if (GLOBAL.store) {
+        const msg = await GLOBAL.store.loadMessage(key.remoteJid, key.id)
         return msg?.message || undefined
     }
-    // only if store is present
-    return proto.Message.fromObject({})
+    return {}
 }
 
 let qr = "";
-async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-    let { version, isLatest, error } = await fetchLatestBaileysVersion();
-    if (error) {
-        version = [2, 3000, 1015901307]; // fallback to a stable version
-    }
-    console.log('version', version.join("."), 'isLatest', isLatest)
-    /** @type {import('@adiwajshing/baileys').WASocket} */
-    const sock = makeWASocket.default({
-        auth: {
-            creds: state.creds,
-            keys: state.keys,
-        },
-        logger: MemoryStore.logger,
-        version,
-        msgRetryCounterMap,
-        retryRequestDelayMs: 150,
 
-        // this method works for poll, need to check if "waiting for message" problem is back
-        getMessage, //messageRetryHandler.messageRetryHandler
-    })
+console.log("Starting Baileys...");
+BaileysBottle.init({
+    type: "sqlite",
+    database: "db.sqlite"
+}).then(async (bottle) => {
+    const clientName = "BabiBot";
+    console.log("Creating store...");
 
-    try {
-        MemoryStore.store.bind(sock.ev)
-        GLOBAL.store = MemoryStore;
-    } catch (error) {
-        console.log(error);
-        errorMsgQueue(error);
+    const logger = pino({ level: 'silent' });
+    const { auth, store } = await bottle.createStore(clientName);
+    GLOBAL.store = store;
+
+    const useLocalAuth = false;
+    let state, saveState;
+    if (useLocalAuth) {
+        console.log("Using local auth");
+        const authState = await useMultiFileAuthState('./auth_info_babibot')
+        state = authState.state;
+        saveState = authState.saveCreds;
     }
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update
-        if (connection === 'close') {
-            const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut
-            console.log('connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect, ", status code: ", lastDisconnect.error?.output?.statusCode)
-            // reconnect if not logged out
-            if (lastDisconnect.error?.output?.statusCode === DisconnectReason.timedOut
-                || lastDisconnect.error?.output?.statusCode === DisconnectReason.connectionClosed) {
-                setTimeout(() => {
+    else {
+        console.log("Using DB auth");
+        const authState = await auth.useAuthHandle({
+            credsFile: "./BabiBotCreds.json",
+            replace: false //optional, set true to force session replacement if already exists in DB
+        });
+        state = authState.state;
+        saveState = authState.saveState;
+    }
+
+
+    async function connectToWhatsApp() {
+        let { version, isLatest, error } = await fetchLatestBaileysVersion();
+        if (error) {
+            version = [2, 3000, 1015901307]; // fallback to a stable version
+        }
+        console.log('version', version.join("."), 'isLatest', isLatest)
+        /** @type {import('baileys').WASocket} */
+        const sock = makeWASocket({
+            auth: state,
+            logger: logger,
+            version,
+            msgRetryCounterMap,
+            retryRequestDelayMs: 150,
+            syncFullHistory: false,
+            getMessage
+        })
+
+        // bind store to the socket events
+        store?.bind(sock.ev);
+
+        sock.ev.on('connection.update', (update) => {
+            const { connection, lastDisconnect } = update
+            if (connection === 'close') {
+                const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut
+                console.log('connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect, ", status code: ", lastDisconnect.error?.output?.statusCode)
+                // reconnect if not logged out
+                if (lastDisconnect.error?.output?.statusCode === DisconnectReason.timedOut
+                    || lastDisconnect.error?.output?.statusCode === DisconnectReason.connectionClosed) {
+                    setTimeout(connectToWhatsApp, 5000);
+                    console.log('reconnecting in 5 second...')
+                }
+                else if (shouldReconnect) {
                     connectToWhatsApp()
-                }, 5000)
-                console.log('reconnecting in 5 second...')
+                }
+            } else if (connection === 'open') {
+                // consol in green color
+                console.log('\x1b[32m%s\x1b[0m', 'Baileys is connected!' + (sock.user.id || "undefined"))
+                GLOBAL.sock = sock;
             }
-            else if (shouldReconnect) {
-                connectToWhatsApp()
+            if (connection === "connecting") {
+                //console in yellow color
+                console.log('\x1b[33m%s\x1b[0m', 'connecting');
             }
-        } else if (connection === 'open') {
-            // consol in green color
-            console.log('\x1b[32m%s\x1b[0m', 'Baileys is connected!')
-            GLOBAL.sock = sock;
-        }
-        if (connection === "connecting") {
-            //console in yellow color
-            console.log('\x1b[33m%s\x1b[0m', 'connecting');
-        }
-        qr = update.qr;
-        if (qr) {
-            console.log('QR code: ', qr);
-            QRCode.toString(qr, function (err, str) {
-                console.log(str)
-            })
-        }
-    })
-    sock.ev.on('creds.update', () => {
-        console.log('creds.update')
-        saveCreds()
-    })
+            qr = update.qr;
+            if (qr) QRCode.toString(qr, (err, str) => console.log(str));
+        })
+        sock.ev.on('creds.update', () => {
+            console.log('creds.update')
+            saveState()
+        })
 
-    // join groups
-    sock.ev.on('groups.upsert', async (event) => {
-        for (const ev of event) {
-            console.log(event);
+        // join groups
+        sock.ev.on('groups.upsert', async (event) => {
+            for (const ev of event) {
+                console.log(event);
 
-            const superUser_inGroup = ev.participants.some(p => p.admin && p.id.includes(SUPERUSER))
-            // superuser isn't falsy, and he admin at the group - do nothing
-            if (SUPERUSER && superUser_inGroup) return;
+                const superUser_inGroup = ev.participants.some(p => p.admin && p.id.includes(SUPERUSER))
+                // superuser isn't falsy, and he admin at the group - do nothing
+                if (SUPERUSER && superUser_inGroup) return;
 
-            await sock.sendMessage(ev.id, {
-                text: "היי! אני באבי בוט 😃\n"
-                    + "שלחו לי את המילה '!פקודות' והתחילו להנות!\n\n"
-                    + "(לידעתכם ההודעות שתשלחו לבוט אינן חסויות ויש למפתח גישה לראותן, השימוש בבוט מהווה את הסכמתכם לכך)\n\n"
-                    + "כל הפקודות --> https://bit.ly/babibot"
-            });
-        }
-    })
+                await sock.sendMessage(ev.id, {
+                    text: "היי! אני באבי בוט 😃\n"
+                        + "שלחו לי את המילה '!פקודות' והתחילו להנות!\n\n"
+                        + "(לידעתכם ההודעות שתשלחו לבוט אינן חסויות ויש למפתח גישה לראותן, השימוש בבוט מהווה את הסכמתכם לכך)\n\n"
+                        + "כל הפקודות --> https://bit.ly/babibot"
+                });
+            }
+        })
 
-    // handle poll updates (show the votes in the poll only for one user)
-    sock.ev.on("messages.update", async (message) => {
-        for (const { key, update } of message) {
-            if (update.pollUpdates) {
-                const pollCreation = await getMessage(key);
-                if (pollCreation) {
-                    const pollMessage = getAggregateVotesInPollMessage({
-                        message: pollCreation,
-                        pollUpdates: update.pollUpdates,
-                    })
-                    const [messageCtx] = message;
-                    let payload = {
-                        ...messageCtx,
-                        body: pollMessage.filter(poll => poll.voters.length > 0),
-                        remoteJid: key.remoteJid,
-                        pollId: key.id,
-                        pollInfo: pollCreation.pollCreationMessage
-                    };
+        // handle poll updates (show the votes in the poll only for one user)
+        sock.ev.on("messages.update", async (message) => {
+            for (const { key, update } of message) {
+                if (update.pollUpdates) {
+                    const pollCreation = await getMessage(key);
+                    if (pollCreation) {
+                        const pollMessage = getAggregateVotesInPollMessage({
+                            message: pollCreation,
+                            pollUpdates: update.pollUpdates,
+                        })
+                        const [messageCtx] = message;
+                        let payload = {
+                            ...messageCtx,
+                            body: pollMessage.filter(poll => poll.voters.length > 0),
+                            remoteJid: key.remoteJid,
+                            pollId: key.id,
+                            pollInfo: pollCreation.pollCreationMessage
+                        };
 
-                    console.log("poll message", payload);
+                        console.log("poll message", payload);
 
-                    // update in Av15
-                    if (GLOBAL.Av15.jids[key.remoteJid]) {
-                        /** @type {{id: string, votes: [], mentionUsers: string[]}[]} */
-                        let polls = GLOBAL.Av15.jids[key.remoteJid].savedPolls;
-                        let poll = polls.find(p => p.pollID === key.id);
-                        if (poll) {
-                            if (poll.votes.length === 0)
-                                poll.votes = pollMessage;
-                            else {
-                                pollMessage.forEach(voteUpdate => {
-                                    /** @type {{name: string, voters: string[]}} */
-                                    let vote = poll.votes.find(v => v.name === voteUpdate.name);
+                        // update in Av15
+                        if (GLOBAL.Av15.jids[key.remoteJid]) {
+                            /** @type {{id: string, votes: [], mentionUsers: string[]}[]} */
+                            let polls = GLOBAL.Av15.jids[key.remoteJid].savedPolls;
+                            let poll = polls.find(p => p.pollID === key.id);
+                            if (poll) {
+                                if (poll.votes.length === 0)
+                                    poll.votes = pollMessage;
+                                else {
+                                    pollMessage.forEach(voteUpdate => {
+                                        /** @type {{name: string, voters: string[]}} */
+                                        let vote = poll.votes.find(v => v.name === voteUpdate.name);
 
-                                    // add the new voters to the vote 
-                                    if (voteUpdate.voters.length > 0) {
-                                        // concat the voters without duplicates
-                                        vote.voters = [...new Set([...vote.voters, ...voteUpdate.voters])];
-                                    }
-                                    // remove the voters from the vote
-                                    else {
-                                        vote.voters = vote.voters.filter(v => v !== update.pollUpdates[0].pollUpdateMessageKey.participant);
-                                    }
-                                });
+                                        // add the new voters to the vote 
+                                        if (voteUpdate.voters.length > 0) {
+                                            // concat the voters without duplicates
+                                            vote.voters = [...new Set([...vote.voters, ...voteUpdate.voters])];
+                                        }
+                                        // remove the voters from the vote
+                                        else {
+                                            vote.voters = vote.voters.filter(v => v !== update.pollUpdates[0].pollUpdateMessageKey.participant);
+                                        }
+                                    });
+                                }
+                                console.log("poll", poll);
                             }
-                            console.log("poll", poll);
-                        }
 
+                        }
                     }
                 }
             }
-        }
-    });
+        });
 
-    const allowCommands = ['!סטיקר', "!גוגל", "!תמלל", "!פקודות", "!יוםאהבה", "!אהבה"];
+        const allowCommands = ['!סטיקר', "!גוגל", "!תמלל", "!פקודות", "!יוםאהבה", "!אהבה"];
 
-    // handle messages
-    sock.ev.on('messages.upsert', async ({ messages, type }) => {
-        if (type == 'notify') {
-            for (const msg of messages) {
-                if (!canHandleMsg(msg.key)) return;
+        // handle messages
+        sock.ev.on('messages.upsert', async ({ messages, type }) => {
+            if (type == 'notify') {
+                for (const msg of messages) {
+                    //console.log("new message from ", msg.key.remoteJid, ":", msg.message);
+                    if (!canHandleMsg(msg.key)) return;
 
-                if (!msg.message) continue; // if there is no text or media message
-                if (msg.key.remoteJid === 'status@broadcast') continue; // ignore status messages
-                if (msg.key.remoteJid.includes("call")) continue; // ignore call messages
+                    if (!msg.message) continue; // if there is no text or media message
+                    if (msg.key.remoteJid === 'status@broadcast') continue; // ignore status messages
+                    if (msg.key.remoteJid.includes("call")) continue; // ignore call messages
 
-                let msgText = msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption
-                    || msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-                // avoid handling commands from myself
-                if (msg.key.fromMe && !allowCommands.some(cmd => msgText.startsWith(cmd))) continue;
+                    let msgText = msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption
+                        || msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+                    // avoid handling commands from myself
+                    if (msg.key.fromMe && !allowCommands.some(cmd => msgText.startsWith(cmd))) continue;
 
-                let proType = msg.message?.protocolMessage?.type;
-                if (proType == proto.Message.ProtocolMessage.Type.REVOKE ||
-                    proType == proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
-                    continue;
+                    let proType = msg.message?.protocolMessage?.type;
+                    if (proType == proto.Message.ProtocolMessage.Type.REVOKE ||
+                        proType == proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
+                        continue;
 
-                handlerQueue.add(() => handleMessage(sock, msg, mongo));
+                    handlerQueue.add(() => handleMessage(sock, msg, mongo));
+                }
             }
-        }
-        if (type === 'append') {
-            console.log(messages.length, " unread messages");
-            if (!PRODUCTION) return; // avoid double handling in dev
+            if (type === 'append') {
+                console.log(messages.length, " unread messages");
+                if (!PRODUCTION) return; // avoid double handling in dev
 
-            for (const msg of messages) {
-                if (!msg.message) continue; // if there is no text or media message
-                if (msg.key.fromMe) continue;
-                if (msg.key.remoteJid === 'status@broadcast') continue; // ignore status messages
+                for (const msg of messages) {
+                    if (!msg.message) continue; // if there is no text or media message
+                    if (msg.key.fromMe) continue;
+                    if (msg.key.remoteJid === 'status@broadcast') continue; // ignore status messages
 
-                let proType = msg.message?.protocolMessage?.type;
-                if (proType == proto.Message.ProtocolMessage.Type.REVOKE ||
-                    proType == proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
-                    continue;
+                    let proType = msg.message?.protocolMessage?.type;
+                    if (proType == proto.Message.ProtocolMessage.Type.REVOKE ||
+                        proType == proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
+                        continue;
 
-                // avoid handling any protocol messages
-                if (msg.message?.protocolMessage) continue;
+                    // avoid handling any protocol messages
+                    if (msg.message?.protocolMessage) continue;
 
-                handlerQueue.add(() => handleMessage(sock, msg, mongo));
+                    handlerQueue.add(() => handleMessage(sock, msg, mongo));
 
+                }
             }
-        }
-    })
+        })
+    }
+    connectToWhatsApp();
+}).catch(err => console.log("error in BaileysBottle.init:", err));
 
-
-}
-// run in main file
-connectToWhatsApp();
 
 /**
  * 
- * @param {{remoteJid:string,participant:string}} key 
+ * @param {import('baileys').WAMessageKey} key 
  * @returns 
  */
 function canHandleMsg(key) {
     if (PRODUCTION) return true;
     // in private chat
-    if (key.remoteJid.includes(SUPERUSER)) return true;
+    if (key.remoteJid.includes(SUPERUSER) && key.remoteJidAlt.includes(SUPERUSER))
+        return true;
     // in group
-    if (key.participant && key.participant.includes(SUPERUSER)) return true;
+    if ((key.participant && key.participant.includes(SUPERUSER)) ||
+        (key.participantAlt && key.participantAlt.includes(SUPERUSER)))
+        return true;
     return false;
 }
 

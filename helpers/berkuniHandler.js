@@ -1,5 +1,5 @@
-import MemoryStore from '../src/memorystore.js'
-import { downloadMediaMessage } from '@adiwajshing/baileys';
+import { GLOBAL } from '../src/storeMsg.js';
+import { downloadMediaMessage } from 'baileys';
 import barkuniDB from '../src/schemas/barkuni.js';
 import { Sticker } from 'wa-sticker-formatter';
 import { sendCustomMsgQueue, errorMsgQueue } from '../src/QueueObj.js';
@@ -7,7 +7,7 @@ import { sendCustomMsgQueue, errorMsgQueue } from '../src/QueueObj.js';
 
 /**
  * when ```!barkuni``` is called, this function will be called
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
  * @param {String} superuser
  */
 async function BarkuniSticker(msg, superuser) {
@@ -18,7 +18,7 @@ async function BarkuniSticker(msg, superuser) {
         let msgID = msg.message.extendedTextMessage.contextInfo.stanzaId;
         if (!msgID) return;
 
-        let quotedMessage = await MemoryStore.loadMessage(id, msgID);
+        let quotedMessage = await GLOBAL.store.loadMessage(id, msgID);
         // if no quoted message, continue to search for sticker
         if (!quotedMessage) return searchBarkuni(id);
 
