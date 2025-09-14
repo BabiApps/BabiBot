@@ -8,7 +8,7 @@ export const info = new Information()
 /**
  * 
  * @param {string} userID 
- * @param {Array<{id,type,thumbnail,title,channelTitle,shortBylineText,length,isLive}>} search 
+ * @param {Array<{title,videoId,url,type}>} search 
  */
 Information.prototype.YTsetSearch = function (userID, search) {
     /** @type {Map} */
@@ -20,7 +20,7 @@ Information.prototype.YTsetSearch = function (userID, search) {
 /**
  * 
  * @param {string} userID 
- * @returns {Array<{id,type,thumbnail,title,channelTitle,shortBylineText,length,isLive}>}  
+ * @returns {Array<{title,videoId,url,type}> | undefined}
  */
 Information.prototype.YTgetSearch = function (userID) {
     if (!this.map.has(userID)) return;

@@ -4,7 +4,7 @@ import noteHendler from './helpers/noteHandler.js';
 import BarkuniSticker from './helpers/berkuniHandler.js';
 import KupaRashitSticker from './helpers/kupaRashitHandler.js';
 import sendSticker from './helpers/stickerMaker.js';
-import { DownloadV2, DownloadVideoMP4, downloadTYoutubeVideo, handlerQueueYTDownload } from './helpers/downloader.js';
+import { downloadFromLink, YouTubeDownload } from './helpers/youtube.js';
 import { GLOBAL } from './src/storeMsg.js';
 //import ChatGPT from './helpers/chatgpt.js';
 import UnofficalGPT from './helpers/unofficalGPT.js';
@@ -200,8 +200,7 @@ export default async function handleMessage(sock, msg, mongo) {
         info.YTdeleteSearch(id);
 
         if (TYQueue.size > 0) sendMsgQueue(id, "מקומך בתור: " + TYQueue.size + "\nאנא המתן...");
-        TYQueue.add(async () => await downloadTYoutubeVideo(id, video.id));
-        //TYQueue.add(async () => await handlerQueueYTDownload(id, video.id));
+        TYQueue.add(async () => await downloadFromLink(id, video.url, YTinfo.type));
         return;
     }
     // set group config
@@ -805,19 +804,8 @@ export default async function handleMessage(sock, msg, mongo) {
      * YOUTUBE
      #########*/
     if ((textMsg.startsWith("!youtube") || textMsg.startsWith("!יוטיוב"))) {
-        //return sendMsgQueue(id, "שירות הורדה מיוטיוב לא זמין כרגע");
-        // return sendMsgQueue(id, "שירות הורדת קובץ שמע מיוטיוב לא זמין כרגע."
-        //     + "\nניתן להשתמש בפקודה '!סרטון' להורדת סרטונים מיוטיוב"
-        //     + "\nאו לחילופין להשתמש בשירותים אחרים כמו t.me/Musicvideobybot");
-        return DownloadV2(msg);
+        return YouTubeDownload(id, textMsg);
     }
-
-    if ((textMsg.startsWith("!video") || textMsg.startsWith("!Video")
-        || textMsg.startsWith("!וידאו") || textMsg.startsWith("!סרטון"))) {
-        //return sendMsgQueue(id, "שירות הורדה מיוטיוב לא זמין כרגע");
-        return DownloadVideoMP4(id, textMsg);
-    }
-
 
     // ##############
     // LOVE Calculator
@@ -879,7 +867,6 @@ export default async function handleMessage(sock, msg, mongo) {
         let mentionedJids = msg.message.extendedTextMessage.contextInfo.mentionedJid;
         const SOCK_NUM = GLOBAL.sock.user.id.split(":")[0].split("@")[0];
         const SOCK_LID = GLOBAL.sock.user.lid.split(":")[0].split("@")[0];
-        console.log(mentionedJids, SOCK_NUM, SOCK_LID);
         if (mentionedJids.some(jid => jid.startsWith(SOCK_NUM) || jid.startsWith(SOCK_LID)))
             return sendMsgQueue(id, "היי אני באבי בוט, מישהו קרא לי?\nשלחו לי את הפקודה '!פקודות' כדי שאני אראה לכם מה אני יודע לעשות");
     }

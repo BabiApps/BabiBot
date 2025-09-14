@@ -16,13 +16,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "baileys": "github:WhiskeySockets/Baileys",
     "@adiwajshing/keyed-db": "^0.2.4",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google-ai/generativelanguage": "^3.4.0",
     "@hebcal/core": "^5.10.1",
     "@xmldom/xmldom": "^0.8.11",
     "axios": "^1.11.0",
+    "baileys": "github:WhiskeySockets/Baileys",
     "baileys-bottle-devstroupe": "file:custom_modules/baileys-bottle-devstroupe-2.3.1.tgz",
     "bcrypt": "^5.1.0",
     "canvas": "^3.2.0",
@@ -48,9 +48,7 @@
     "throttled-queue": "^3.0.0",
     "ultimate-text-to-image": "^1.0.1",
     "wa-sticker-formatter": "^4.4.4",
-    "youtube-mp3-downloader": "^0.7.11",
-    "youtube-search-api": "^2.0.1",
-    "ytdl-core": "npm:@distube/ytdl-core@latest"
+    "youtubei.js": "^15.0.1"
   },
   "devDependencies": {
     "husky": "^9.1.7",
