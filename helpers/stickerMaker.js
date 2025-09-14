@@ -1,5 +1,5 @@
 import { downloadMediaMessage } from 'baileys';
-import pkg from 'wa-sticker-formatter';
+import { Sticker, StickerTypes } from 'wa-sticker-formatter';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import ffmpeg from 'fluent-ffmpeg';
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
@@ -10,11 +10,7 @@ import { sendMsgQueue, errorMsgQueue, sendCustomMsgQueue } from '../src/QueueObj
 /*** enable or disable the remove background feature (can take up to 3 minutes on low-spec servers) */
 const enableRemoveBackground = false;
 import { Jimp } from "jimp";
-import sharp from 'sharp';
 import { GLOBAL } from '../src/storeMsg.js';
-
-const { Sticker, StickerTypes } = pkg;
-
 
 const parameters = {
     colors: [
@@ -255,6 +251,9 @@ async function makeTextSticker(id, quotedText, commandText) {
  * 
  */
 async function makeMediaSticker(msg, commandText) {
+    // import sharp here to avoid issues on some systems
+    const sharp = (await import('sharp')).default;
+
     const id = msg.key.remoteJid;
     let buffer;
     try {
