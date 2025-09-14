@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ quiet: true });
 import { Canvas } from 'canvas'; // fix on windows (canvas needs to imported first)
 import makeWASocket, { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion, getAggregateVotesInPollMessage } from 'baileys';
 // Import baileys-bottle - now properly built for ESM
@@ -13,6 +13,7 @@ import { errorMsgQueue, handlerQueue } from './src/QueueObj.js';
 import { GLOBAL } from './src/storeMsg.js';
 import { pino } from "pino";
 import handleMessage from './handler.js';
+import { getMsgType, MsgType } from './helpers/msgType.js';
 
 const msgRetryCounterMap = {};
 
@@ -107,7 +108,7 @@ BaileysBottle.init({
                 }
             } else if (connection === 'open') {
                 // consol in green color
-                console.log('\x1b[32m%s\x1b[0m', 'Baileys is connected!' + (sock.user.id || "undefined"))
+                console.log('\x1b[32m%s\x1b[0m', 'Baileys is connected! ' + (sock.user?.id.split(":")[0] || "undefined"))
                 GLOBAL.sock = sock;
             }
             if (connection === "connecting") {
@@ -194,54 +195,40 @@ BaileysBottle.init({
             }
         });
 
-        const allowCommands = ['!סטיקר', "!גוגל", "!תמלל", "!פקודות", "!יוםאהבה", "!אהבה"];
-
         // handle messages
         sock.ev.on('messages.upsert', async ({ messages, type }) => {
-            if (type == 'notify') {
-                for (const msg of messages) {
-                    //console.log("new message from ", msg.key.remoteJid, ":", msg.message);
-                    if (!canHandleMsg(msg.key)) return;
-
-                    if (!msg.message) continue; // if there is no text or media message
-                    if (msg.key.remoteJid === 'status@broadcast') continue; // ignore status messages
-                    if (msg.key.remoteJid.includes("call")) continue; // ignore call messages
-
-                    let msgText = msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption
-                        || msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-                    // avoid handling commands from myself
-                    if (msg.key.fromMe && !allowCommands.some(cmd => msgText.startsWith(cmd))) continue;
-
-                    let proType = msg.message?.protocolMessage?.type;
-                    if (proType == proto.Message.ProtocolMessage.Type.REVOKE ||
-                        proType == proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
-                        continue;
-
-                    handlerQueue.add(() => handleMessage(sock, msg, mongo));
-                }
-            }
-            if (type === 'append') {
+            // avoid double handling in dev
+            if (type === 'append' && !PRODUCTION) {
                 console.log(messages.length, " unread messages");
-                if (!PRODUCTION) return; // avoid double handling in dev
-
-                for (const msg of messages) {
-                    if (!msg.message) continue; // if there is no text or media message
-                    if (msg.key.fromMe) continue;
-                    if (msg.key.remoteJid === 'status@broadcast') continue; // ignore status messages
-
-                    let proType = msg.message?.protocolMessage?.type;
-                    if (proType == proto.Message.ProtocolMessage.Type.REVOKE ||
-                        proType == proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
-                        continue;
-
-                    // avoid handling any protocol messages
-                    if (msg.message?.protocolMessage) continue;
-
-                    handlerQueue.add(() => handleMessage(sock, msg, mongo));
-
-                }
+                return;
             }
-        })
+
+            for (const msg of messages) {
+                // ignore messages without content or from self
+                if (!msg.message || msg.key.fromMe) continue;
+
+                // ignore status or call messages
+                if (msg.key.remoteJid === 'status@broadcast' || msg.key.remoteJid.includes("call")) continue;
+
+                // ignore messages with unsupported type
+                if (getMsgType(msg) === MsgType.OTHER) continue;
+
+                // avoid handling any protocol messages
+                if (msg.message?.protocolMessage) continue;
+
+                // avoid handling protocol messages
+                const proType = msg.message?.protocolMessage?.type;
+                if (proType === proto.Message.ProtocolMessage.Type.REVOKE ||
+                    proType === proto.Message.ProtocolMessage.Type.MESSAGE_EDIT)
+                    continue;
+
+                // additional custom check
+                if (!canHandleMsg(msg.key)) continue;
+
+                // enqueue message handler
+                handlerQueue.add(() => handleMessage(sock, msg, mongo));
+            }
+        });
     }
     connectToWhatsApp();
 }).catch(err => console.log("error in BaileysBottle.init:", err));
@@ -255,7 +242,7 @@ BaileysBottle.init({
 function canHandleMsg(key) {
     if (PRODUCTION) return true;
     // in private chat
-    if (key.remoteJid.includes(SUPERUSER) && key.remoteJidAlt.includes(SUPERUSER))
+    if (key.remoteJid.includes(SUPERUSER) || key.remoteJidAlt?.includes(SUPERUSER))
         return true;
     // in group
     if ((key.participant && key.participant.includes(SUPERUSER)) ||
