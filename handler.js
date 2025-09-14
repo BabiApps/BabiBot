@@ -249,6 +249,10 @@ export default async function handleMessage(sock, msg, mongo) {
 
 
     if (textMsg.startsWith("!כולם") || textMsg.startsWith("!everyone")) {
+        // temp disable
+        if (!msg.key.participant?.includes(superuser))
+            return sendMsgQueue(id, "הפקודה לא פעילה כרגע");
+
         if (!msg.key.remoteJid.includes("@g.us"))
             return sendMsgQueue(id, "הפקודה זמינה רק בקבוצות");
 
