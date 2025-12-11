@@ -1,5 +1,5 @@
 import { Innertube, UniversalCache, Utils } from 'youtubei.js';
-import { existsSync, mkdirSync, createWriteStream } from 'fs';
+import { existsSync, mkdirSync, createWriteStream, rmSync } from 'fs';
 import { sendMsgQueue, sendCustomMsgQueue } from '../src/QueueObj.js';
 import { info } from './globals.js';
 
@@ -80,6 +80,11 @@ export async function downloadFromLink(jid, link, type = 'audio') {
             sendCustomMsgQueue(jid, { audio: { url: filename }, mimetype: 'audio/mpeg', ptt: true });
         else
             sendCustomMsgQueue(jid, { video: { url: filename }, mimetype: 'video/mp4' });
+
+        // remove the file after 1 minute
+        setTimeout(() => {
+            rmSync(filename, { force: true });
+        }, 60000);
     });
     file.on('error', (err) => {
         console.error(err);

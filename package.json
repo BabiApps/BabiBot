@@ -23,7 +23,7 @@
     "@xmldom/xmldom": "^0.8.11",
     "axios": "^1.11.0",
     "baileys": "github:WhiskeySockets/Baileys",
-    "baileys-bottle-devstroupe": "file:custom_modules/baileys-bottle-devstroupe-2.3.1.tgz",
+    "baileys-bottle-devstroupe": "github:BabiApps/baileys-bottle-devstroupe",
     "bcrypt": "^5.1.0",
     "canvas": "^3.2.0",
     "chatgpt": "^5.2.5",

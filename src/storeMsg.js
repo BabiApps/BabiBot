@@ -3,7 +3,7 @@ import fs from "fs";
 /** @type {import('baileys').WASocket} */
 let tempSock;
 
-/** @type {import("baileys-bottle-devstroupe/lib/bottle/StoreHandle").default} */
+/** @type {import('baileys-bottle-devstroupe/lib/bottle/StoreHandle.js').default} */
 let tempStore;
 
 /** @type {{[jid:string]: {"messageID": {reactionsCount: number,minToMute: number, startTime: number}}}}*/
