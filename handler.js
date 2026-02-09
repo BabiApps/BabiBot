@@ -42,13 +42,15 @@ const DEFAULT_COUNT_USER_TO_MUTE = 7;
  */
 export default async function handleMessage(sock, msg, mongo) {
     let id = msg.key.remoteJid || "";
+    let idAlt = msg.key.remoteJidAlt || ""; 
+
     let caption = msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption || "";
     let textMsg = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
     caption = caption.replace(new RegExp(String.fromCharCode(160), "g"), " ").trim();
     textMsg = textMsg.replace(new RegExp(String.fromCharCode(160), "g"), " ").trim();
 
     // update the bot without updating npm packages
-    if (id.includes(superuser)) {
+    if (id.includes(superuser) || idAlt.includes(superuser)) {
         if (textMsg.startsWith("!update") || textMsg.startsWith("!עדכן")) {
             // pull from git
             exec('git pull', async (err, stdout, stderr) => {
