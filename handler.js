@@ -533,19 +533,28 @@ export default async function handleMessage(sock, msg, mongo) {
             return sendMsgQueue(id, "אין חיבור למסד נתונים");
 
         let issuperuser = false;
-        if (msg.key.remoteJid?.includes(superuser) || msg.key.participant?.includes(superuser))
+        if (msg.key.remoteJid?.includes(superuser) || msg.key.participant?.includes(superuser)
+            || msg.key.remoteJidAlt?.includes(superuser) || msg.key.participantAlt?.includes(superuser))
             issuperuser = true;
 
         return noteHendler.saveNote(msg, true, issuperuser);
     }
 
     // delete note
+    if (textMsg.startsWith('!deleteall') || textMsg.startsWith('!מחקהכל')) {
+        if (!mongo.isConnected)
+            return sendMsgQueue(id, "אין חיבור למסד נתונים");
+
+        return noteHendler.deleteAll(msg);
+    }
+
     if (textMsg.startsWith('!delete') || textMsg.startsWith('!מחק')) {
         if (!mongo.isConnected)
             return sendMsgQueue(id, "אין חיבור למסד נתונים");
 
         let issuperuser = false;
-        if (msg.key.remoteJid?.includes(superuser) || msg.key.participant?.includes(superuser))
+        if (msg.key.remoteJid?.includes(superuser) || msg.key.participant?.includes(superuser) ||
+            msg.key.remoteJidAlt?.includes(superuser) || msg.key.participantAlt?.includes(superuser))
             issuperuser = true;
 
         return noteHendler.deleteNote(msg, sock, issuperuser);

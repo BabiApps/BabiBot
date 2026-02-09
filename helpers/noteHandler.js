@@ -39,7 +39,15 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
 
     let quoted;
     try {
-        quoted = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+        if (msg.message?.extendedTextMessage?.contextInfo) {
+            quoted = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+
+            if (!quoted) {
+                quoted = {}
+                quoted.message = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+            }
+        }
+
     } catch (error) {
         console.log(error);
     }
@@ -68,6 +76,7 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
 
     // ### media note ###
 
+    console.log(quoted);
     let buffer = await downloadMediaMessage(quoted, "buffer");
 
     // check if the buffer more than 15 mb
@@ -83,12 +92,15 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
         type: type, mimetype: mime,
         fileName: nameFile,
         chat: id, isGlobal: isGlobal
-    }, (err, res) => {
-        console.log(res);
-        if (err) return sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
-
-        sendMsgQueue(id, "ההערה נשמרה בהצלחה")
-    });
+    })
+        .then(() => {
+            sendMsgQueue(id, "ההערה נשמרה בהצלחה")
+            console.log("media note created successfully");
+        })
+        .catch((err) => {
+            sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
+            console.log(err);
+        });
 
 }
 
@@ -100,6 +112,7 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
  */
 NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = false) {
     let id = msg.key.remoteJid;
+    let idAlt = msg.key.remoteJidAlt;
 
     let msgText = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
     let q = msgText.split(" ")[1];
@@ -110,8 +123,8 @@ NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = fals
     let searchMedia = await mediaNote.find({ q: q });
 
     // filter the notes
-    search = search.filter(note => note.chat === id || note.isGlobal == true);
-    searchMedia = searchMedia.filter(note => note.chat === id || note.isGlobal == true);
+    search = search.filter(note => note.chat === id || note.chat === idAlt || note.isGlobal == true);
+    searchMedia = searchMedia.filter(note => note.chat === id || note.chat === idAlt || note.isGlobal == true);
 
     if (search.length === 0 && searchMedia.length === 0)
         return sendMsgQueue(id, "אופס... אין הערה בשם זה")
@@ -123,11 +136,14 @@ NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = fals
             return sendMsgQueue(id, "אופס... אין לך הרשאה למחוק הערה זו")
 
         // delete the note
-        savedNotes.deleteOne({ _id: note._id }, (err, res) => {
-            if (err) return sendMsgQueue(id, "אופס... משהו השתבש");
-
-            sendMsgQueue(id, "ההערה נמחקה בהצלחה")
-        })
+        savedNotes.deleteOne({ _id: note._id })
+            .then(() => {
+                sendMsgQueue(id, "ההערה נמחקה בהצלחה")
+            })
+            .catch((err) => {
+                sendMsgQueue(id, "אופס... משהו השתבש");
+                console.log(err);
+            });
     }
 
     for (const note of searchMedia) {
@@ -136,14 +152,44 @@ NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = fals
             return sendMsgQueue(id, "אופס... אין לך הרשאה למחוק הערה זו")
 
         // delete the note
-        mediaNote.deleteOne({ _id: note._id }, (err, res) => {
-            if (err) return sendMsgQueue(id, "אופס... משהו השתבש")
-
-            sendMsgQueue(id, "ההערה נמחקה בהצלחה")
-        });
+        mediaNote.deleteOne({ _id: note._id })
+            .then(() => {
+                sendMsgQueue(id, "ההערה נמחקה בהצלחה")
+            })
+            .catch((err) => {
+                sendMsgQueue(id, "אופס... משהו השתבש");
+                console.log(err);
+            });
     }
 }
 
+NoteHendler.prototype.deleteAll = async function (msg) {
+    let id = msg.key.remoteJid;
+    let idAlt = msg.key.remoteJidAlt;
+
+    // get notes from the database
+    let resultPrivate = await savedNotes.find({ chat: id });
+    let resultPrivateAlt = await savedNotes.find({ chat: idAlt });
+
+    let resultPrivateMedia = await mediaNote.find({ chat: id });
+    let resultPrivateMediaAlt = await mediaNote.find({ chat: idAlt });
+
+    // filter the notes that are not global
+    resultPrivate = resultPrivate.filter(note => note.isGlobal != true);
+    resultPrivateMedia = resultPrivateMedia.filter(note => note.isGlobal != true);
+    resultPrivateAlt = resultPrivateAlt.filter(note => note.isGlobal != true);
+    resultPrivateMediaAlt = resultPrivateMediaAlt.filter(note => note.isGlobal != true);
+
+    // combine the notes
+    let privateNotes = [...resultPrivate, ...resultPrivateMedia, ...resultPrivateAlt, ...resultPrivateMediaAlt];
+
+    for (const note of privateNotes) {
+        await savedNotes.deleteOne({ _id: note._id })
+        await mediaNote.deleteOne({ _id: note._id })
+    }
+
+    sendMsgQueue(id, "כל ההערות הפרטיות נמחקו בהצלחה");
+}
 /**
  * activate by the command ```!notes``` or ```!הערות```
  * @param {import('baileys').proto.WebMessageInfo} msg 
@@ -151,21 +197,26 @@ NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = fals
  */
 NoteHendler.prototype.getAllNotes = async function (msg, sock) {
     let id = msg.key.remoteJid;
+    let idAlt = msg.key.remoteJidAlt;
 
     // get notes from the database
     let resultPrivate = await savedNotes.find({ chat: id });
+    let resultPrivateAlt = await savedNotes.find({ chat: idAlt });
     let resultPublic = await savedNotes.find({ isGlobal: true });
 
     let resultPrivateMedia = await mediaNote.find({ chat: id });
+    let resultPrivateMediaAlt = await mediaNote.find({ chat: idAlt });
     let resultPublicMedia = await mediaNote.find({ isGlobal: true });
 
     // filter the notes that are not global
     resultPrivate = resultPrivate.filter(note => note.isGlobal != true);
     resultPrivateMedia = resultPrivateMedia.filter(note => note.isGlobal != true);
+    resultPrivateAlt = resultPrivateAlt.filter(note => note.isGlobal != true);
+    resultPrivateMediaAlt = resultPrivateMediaAlt.filter(note => note.isGlobal != true);
 
     // combine the notes
     let globalNotes = [...resultPublic, ...resultPublicMedia];
-    let privateNotes = [...resultPrivate, ...resultPrivateMedia];
+    let privateNotes = [...resultPrivate, ...resultPrivateMedia, ...resultPrivateAlt, ...resultPrivateMediaAlt];
 
     if (globalNotes.length === 0 && privateNotes.length === 0)
         return sendMsgQueue(id, "לא קיימות הערות")
@@ -197,6 +248,7 @@ NoteHendler.prototype.getAllNotes = async function (msg, sock) {
 */
 NoteHendler.prototype.getNote = async function (msg, sock) {
     let id = msg.key.remoteJid;
+    let idAlt = msg.key.remoteJidAlt;
 
     let msgText = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
 
@@ -205,6 +257,7 @@ NoteHendler.prototype.getNote = async function (msg, sock) {
 
     // note with text
     let result = await savedNotes.findOne({ q: q, chat: id });
+    if (!result) result = await savedNotes.findOne({ q: q, chat: idAlt });
     if (result) return sendMsgQueue(id, result.a)
 
     result = await savedNotes.findOne({ q: q, isGlobal: true });
@@ -212,6 +265,7 @@ NoteHendler.prototype.getNote = async function (msg, sock) {
 
     // note with media
     let resultMedia = await mediaNote.findOne({ q: q, chat: id });
+    if (!resultMedia) resultMedia = await mediaNote.findOne({ q: q, chat: idAlt });
     if (!resultMedia) resultMedia = await mediaNote.findOne({ q: q, isGlobal: true });
 
     // note not found
