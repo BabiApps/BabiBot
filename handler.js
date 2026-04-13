@@ -754,6 +754,11 @@ export default async function handleMessage(sock, msg, mongo) {
                 }, null, 2) || res);
 
                 //GLOBAL.updateUnofficialGPTcredit(res?.usage.total_tokens, res.model);
+                if (!res.choices?.[0]?.message?.content){
+                    errorMsgQueue(res);
+                    return sendMsgQueue(id, "אופס... חלה שגיאה\nנסה לשאול שוב");
+                }
+
                 return sendMsgQueue(id, res.choices[0].message.content);
             })
 
