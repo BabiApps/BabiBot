@@ -54,7 +54,7 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
     let { type, mime } = getMsgType(quoted);
 
     // ### text note ### (no quoted message or quoted message is text)
-    if (type == MsgType.TEXT) {
+    if (quoted === undefined || type == MsgType.TEXT) {
         let a = quoted?.message?.conversation
             || quoted?.message?.extendedTextMessage?.text
             || msgText.split(/[\n ]/).slice(2).join(" ") || "";
@@ -67,11 +67,15 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
         if (result?.isGlobal || result?.chat === id)
             return sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
 
-        return savedNotes.create({ q: q, a: a, chat: id, isGlobal: isGlobal }, (err, res) => {
-            if (err) return sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
-
-            sendMsgQueue(id, "ההערה נשמרה בהצלחה");
-        });
+        return savedNotes
+            .create({ q: q, a: a, chat: id, isGlobal: isGlobal })
+            .then(() => {
+                sendMsgQueue(id, "ההערה נשמרה בהצלחה");
+            })
+            .catch((err) => {
+                sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
+                console.log(err);
+            });
     }
 
     // ### media note ###
