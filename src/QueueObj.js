@@ -45,8 +45,8 @@ export function sendMsgQueue(jid, text) {
 /**
  * 
  * @param {string} jid
- * @param {import("@adiwajshing/baileys/lib/Types").AnyMessageContent} content
- * @param {import("@adiwajshing/baileys/lib/Types").MiscMessageGenerationOptions} options
+ * @param {import("baileys/lib/Types").AnyMessageContent} content
+ * @param {import("baileys/lib/Types").MiscMessageGenerationOptions} options
  */
 export function sendCustomMsgQueue(jid, content, options = {}) {
     return msgQueue.add(async () => await GLOBAL.sock.sendMessage(jid, content, options));
@@ -61,7 +61,7 @@ export async function errorMsgQueue(text) {
     //const botNum = GLOBAL.sock.user?.id?.split("@")[0].split(":")[0] + "@s.whatsapp.net";
     const superuserNum = process.env.SUPERUSER + "@s.whatsapp.net";
     try {
-        return await msgQueue.add(async () => await GLOBAL.sock.sendMessage(superuserNum, { text }));
+        return await msgQueue.add(async () => await GLOBAL.sock.sendMessage(superuserNum, { text: "Error: " + text }));
     } catch {
         console.error("errorMsgQueue: failed to send error message to superuser " + process.env.SUPERUSER);
     }

@@ -1,5 +1,4 @@
-import { downloadMediaMessage } from '@adiwajshing/baileys';
-import messageRetryHandler from "../src/retryHandler.js";
+import { downloadMediaMessage } from 'baileys';
 
 import savedNotes from '../src/schemas/notes.js';
 import mediaNote from '../src/schemas/mediaNote.js';
@@ -21,8 +20,8 @@ export default noteHendler;
 
 /**
  * activate by the command ```!note``` or ```!שמור```
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
- * @param {import('@adiwajshing/baileys').WASocket} sock 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').WASocket} sock 
  * @param {Boolean} isGlobal optional, default is false
  * @param {boolean} issuperuser optional, default is null
  */
@@ -40,14 +39,22 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
 
     let quoted;
     try {
-        quoted = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+        if (msg.message?.extendedTextMessage?.contextInfo) {
+            quoted = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+
+            if (!quoted) {
+                quoted = {}
+                quoted.message = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
+            }
+        }
+
     } catch (error) {
         console.log(error);
     }
     let { type, mime } = getMsgType(quoted);
 
     // ### text note ### (no quoted message or quoted message is text)
-    if (type == MsgType.TEXT) {
+    if (quoted === undefined || type == MsgType.TEXT) {
         let a = quoted?.message?.conversation
             || quoted?.message?.extendedTextMessage?.text
             || msgText.split(/[\n ]/).slice(2).join(" ") || "";
@@ -60,15 +67,20 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
         if (result?.isGlobal || result?.chat === id)
             return sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
 
-        return savedNotes.create({ q: q, a: a, chat: id, isGlobal: isGlobal }, (err, res) => {
-            if (err) return sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
-
-            sendMsgQueue(id, "ההערה נשמרה בהצלחה");
-        });
+        return savedNotes
+            .create({ q: q, a: a, chat: id, isGlobal: isGlobal })
+            .then(() => {
+                sendMsgQueue(id, "ההערה נשמרה בהצלחה");
+            })
+            .catch((err) => {
+                sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
+                console.log(err);
+            });
     }
 
     // ### media note ###
 
+    console.log(quoted);
     let buffer = await downloadMediaMessage(quoted, "buffer");
 
     // check if the buffer more than 15 mb
@@ -84,23 +96,27 @@ NoteHendler.prototype.saveNote = async function (msg, isGlobal = false, issuperu
         type: type, mimetype: mime,
         fileName: nameFile,
         chat: id, isGlobal: isGlobal
-    }, (err, res) => {
-        console.log(res);
-        if (err) return sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
-
-        sendMsgQueue(id, "ההערה נשמרה בהצלחה")
-    });
+    })
+        .then(() => {
+            sendMsgQueue(id, "ההערה נשמרה בהצלחה")
+            console.log("media note created successfully");
+        })
+        .catch((err) => {
+            sendMsgQueue(id, "אופס... ההערה כבר קיימת במאגר");
+            console.log(err);
+        });
 
 }
 
 /**
  * 
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
- * @param {import('@adiwajshing/baileys').WASocket} sock 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').WASocket} sock 
  * @param {boolean} issuperuser 
  */
 NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = false) {
     let id = msg.key.remoteJid;
+    let idAlt = msg.key.remoteJidAlt;
 
     let msgText = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
     let q = msgText.split(" ")[1];
@@ -111,8 +127,8 @@ NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = fals
     let searchMedia = await mediaNote.find({ q: q });
 
     // filter the notes
-    search = search.filter(note => note.chat === id || note.isGlobal == true);
-    searchMedia = searchMedia.filter(note => note.chat === id || note.isGlobal == true);
+    search = search.filter(note => note.chat === id || note.chat === idAlt || note.isGlobal == true);
+    searchMedia = searchMedia.filter(note => note.chat === id || note.chat === idAlt || note.isGlobal == true);
 
     if (search.length === 0 && searchMedia.length === 0)
         return sendMsgQueue(id, "אופס... אין הערה בשם זה")
@@ -124,11 +140,14 @@ NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = fals
             return sendMsgQueue(id, "אופס... אין לך הרשאה למחוק הערה זו")
 
         // delete the note
-        savedNotes.deleteOne({ _id: note._id }, (err, res) => {
-            if (err) return sendMsgQueue(id, "אופס... משהו השתבש");
-
-            sendMsgQueue(id, "ההערה נמחקה בהצלחה")
-        })
+        savedNotes.deleteOne({ _id: note._id })
+            .then(() => {
+                sendMsgQueue(id, "ההערה נמחקה בהצלחה")
+            })
+            .catch((err) => {
+                sendMsgQueue(id, "אופס... משהו השתבש");
+                console.log(err);
+            });
     }
 
     for (const note of searchMedia) {
@@ -137,36 +156,71 @@ NoteHendler.prototype.deleteNote = async function (msg, sock, issuperuser = fals
             return sendMsgQueue(id, "אופס... אין לך הרשאה למחוק הערה זו")
 
         // delete the note
-        mediaNote.deleteOne({ _id: note._id }, (err, res) => {
-            if (err) return sendMsgQueue(id, "אופס... משהו השתבש")
-
-            sendMsgQueue(id, "ההערה נמחקה בהצלחה")
-        });
+        mediaNote.deleteOne({ _id: note._id })
+            .then(() => {
+                sendMsgQueue(id, "ההערה נמחקה בהצלחה")
+            })
+            .catch((err) => {
+                sendMsgQueue(id, "אופס... משהו השתבש");
+                console.log(err);
+            });
     }
 }
 
-/**
- * activate by the command ```!notes``` or ```!הערות```
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
- * @param {import('@adiwajshing/baileys').WASocket} sock 
- */
-NoteHendler.prototype.getAllNotes = async function (msg, sock) {
+NoteHendler.prototype.deleteAll = async function (msg) {
     let id = msg.key.remoteJid;
+    let idAlt = msg.key.remoteJidAlt;
 
     // get notes from the database
     let resultPrivate = await savedNotes.find({ chat: id });
+    let resultPrivateAlt = await savedNotes.find({ chat: idAlt });
+
+    let resultPrivateMedia = await mediaNote.find({ chat: id });
+    let resultPrivateMediaAlt = await mediaNote.find({ chat: idAlt });
+
+    // filter the notes that are not global
+    resultPrivate = resultPrivate.filter(note => note.isGlobal != true);
+    resultPrivateMedia = resultPrivateMedia.filter(note => note.isGlobal != true);
+    resultPrivateAlt = resultPrivateAlt.filter(note => note.isGlobal != true);
+    resultPrivateMediaAlt = resultPrivateMediaAlt.filter(note => note.isGlobal != true);
+
+    // combine the notes
+    let privateNotes = [...resultPrivate, ...resultPrivateMedia, ...resultPrivateAlt, ...resultPrivateMediaAlt];
+
+    for (const note of privateNotes) {
+        await savedNotes.deleteOne({ _id: note._id })
+        await mediaNote.deleteOne({ _id: note._id })
+    }
+
+    sendMsgQueue(id, "כל ההערות הפרטיות נמחקו בהצלחה");
+}
+/**
+ * activate by the command ```!notes``` or ```!הערות```
+ * @param {import('baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').WASocket} sock 
+ */
+NoteHendler.prototype.getAllNotes = async function (msg, sock) {
+    let id = msg.key.remoteJid;
+    let idAlt = msg.key.remoteJidAlt;
+
+    // get notes from the database
+    let resultPrivate = await savedNotes.find({ chat: id });
+    let resultPrivateAlt = await savedNotes.find({ chat: idAlt });
     let resultPublic = await savedNotes.find({ isGlobal: true });
 
     let resultPrivateMedia = await mediaNote.find({ chat: id });
+    let resultPrivateMediaAlt = await mediaNote.find({ chat: idAlt });
     let resultPublicMedia = await mediaNote.find({ isGlobal: true });
 
     // filter the notes that are not global
     resultPrivate = resultPrivate.filter(note => note.isGlobal != true);
     resultPrivateMedia = resultPrivateMedia.filter(note => note.isGlobal != true);
+    resultPrivateAlt = resultPrivateAlt.filter(note => note.isGlobal != true);
+    resultPrivateMediaAlt = resultPrivateMediaAlt.filter(note => note.isGlobal != true);
 
     // combine the notes
     let globalNotes = [...resultPublic, ...resultPublicMedia];
-    let privateNotes = [...resultPrivate, ...resultPrivateMedia];
+    let privateNotes = [...resultPrivate, ...resultPrivateMedia, ...resultPrivateAlt, ...resultPrivateMediaAlt];
 
     if (globalNotes.length === 0 && privateNotes.length === 0)
         return sendMsgQueue(id, "לא קיימות הערות")
@@ -193,11 +247,12 @@ NoteHendler.prototype.getAllNotes = async function (msg, sock) {
 
 /**
  * activate by the command ```!get <note name>``` or ```#<note name>```
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
- * @param {import('@adiwajshing/baileys').WASocket} sock
+ * @param {import('baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').WASocket} sock
 */
 NoteHendler.prototype.getNote = async function (msg, sock) {
     let id = msg.key.remoteJid;
+    let idAlt = msg.key.remoteJidAlt;
 
     let msgText = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
 
@@ -206,6 +261,7 @@ NoteHendler.prototype.getNote = async function (msg, sock) {
 
     // note with text
     let result = await savedNotes.findOne({ q: q, chat: id });
+    if (!result) result = await savedNotes.findOne({ q: q, chat: idAlt });
     if (result) return sendMsgQueue(id, result.a)
 
     result = await savedNotes.findOne({ q: q, isGlobal: true });
@@ -213,10 +269,11 @@ NoteHendler.prototype.getNote = async function (msg, sock) {
 
     // note with media
     let resultMedia = await mediaNote.findOne({ q: q, chat: id });
+    if (!resultMedia) resultMedia = await mediaNote.findOne({ q: q, chat: idAlt });
     if (!resultMedia) resultMedia = await mediaNote.findOne({ q: q, isGlobal: true });
 
     // note not found
-    if (!result && !resultMedia) return //sock.sendMessage(id, { text: "אופס... אין הערה בשם זה" }).then(messageRetryHandler.addMessage);
+    if (!result && !resultMedia) return //sock.sendMessage(id, { text: "אופס... אין הערה בשם זה" });
 
     // send the media
     switch (resultMedia.type) {
@@ -240,8 +297,8 @@ NoteHendler.prototype.getNote = async function (msg, sock) {
 
 /**
  * activate by the command ```!note``` or ```!שמור```
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
- * @param {import('@adiwajshing/baileys').WASocket} sock 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').WASocket} sock 
  * @param {Boolean} isGlobal optional, default is false
  * @param {boolean} isAdmin optional, default is false
  */
@@ -252,7 +309,7 @@ NoteHendler.prototype.saveNote1 = async function (msg, sock, isGlobal = false, i
     // get note name
     let msgText = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
     let q = msgText.split(" ")[1].split("\n")[0];
-    if (!q) return sock.sendMessage(id, { text: "אופס... נראה ששכחת לכתוב את שם ההערה" }).then(messageRetryHandler.addMessage);
+    if (!q) return sock.sendMessage(id, { text: "אופס... נראה ששכחת לכתוב את שם ההערה" });
 
     // check if the note already exist
     let result = await allNotes.find({ question: q });
@@ -262,11 +319,11 @@ NoteHendler.prototype.saveNote1 = async function (msg, sock, isGlobal = false, i
 
     // not 0 - exist
     if (result.length)
-        return sock.sendMessage(id, { text: "אופס... קיימת הערה עם שם זה\nנסה שם אחר" }).then(messageRetryHandler.addMessage);
+        return sock.sendMessage(id, { text: "אופס... קיימת הערה עם שם זה\nנסה שם אחר" });
 
     // check permissions to save as global (federation) note
     if (isGlobal && isAdmin !== true)
-        return sock.sendMessage(id, { text: "אופס... אין לך הרשאה לשמור הערה גלובלית" }).then(messageRetryHandler.addMessage);
+        return sock.sendMessage(id, { text: "אופס... אין לך הרשאה לשמור הערה גלובלית" });
     else
         feder = id; // will save as private note
 
@@ -284,7 +341,7 @@ NoteHendler.prototype.saveNote1 = async function (msg, sock, isGlobal = false, i
             isQuoted = true;
         } catch (error) {
             console.log(error);
-            return sock.sendMessage(id, { text: "אופס... לא הצלחתי לגשת להודעה המצוטטת" }).then(messageRetryHandler.addMessage);
+            return sock.sendMessage(id, { text: "אופס... לא הצלחתי לגשת להודעה המצוטטת" });
         }
     }
 
@@ -299,20 +356,20 @@ NoteHendler.prototype.saveNote1 = async function (msg, sock, isGlobal = false, i
         case MsgType.TEXT:
             // get body note
             let a = isQuoted ? msg.message.conversation || msg.message.extendedTextMessage.text : msgText.split(" ").slice(2).join(" ") || "";
-            if (!a) return sock.sendMessage(id, { text: "אופס... נראה ששכחת לכתוב את תוכן ההערה" }).then(messageRetryHandler.addMessage);
+            if (!a) return sock.sendMessage(id, { text: "אופס... נראה ששכחת לכתוב את תוכן ההערה" });
 
             // save the note
             return allNotes.create({ question: q, answer: a, chat: id, federation: feder, type: type }, (err, res) => {
                 if (err) return sock.sendMessage(id, { text: "אופס... ההערה כבר קיימת במאגר" });
 
-                sock.sendMessage(id, { text: "ההערה נשמרה בהצלחה" }).then(messageRetryHandler.addMessage);;
+                sock.sendMessage(id, { text: "ההערה נשמרה בהצלחה" });;
             });
             break;
         case MsgType.DOCUMENT:
             // check if the file is too big
             nameFile = msg.message.documentMessage.fileName;
             let size = buffer.length / 1024 / 1024;
-            if (size > 15) return sock.sendMessage(id, { text: "אופס... הקובץ גדול מדי" }).then(messageRetryHandler.addMessage);
+            if (size > 15) return sock.sendMessage(id, { text: "אופס... הקובץ גדול מדי" });
 
         case MsgType.IMAGE:
         case MsgType.VIDEO:
@@ -331,9 +388,9 @@ NoteHendler.prototype.saveNote1 = async function (msg, sock, isGlobal = false, i
                 chat: id, federation: feder
             }, (err, res) => {
                 console.log(res);
-                if (err) return sock.sendMessage(id, { text: "אופס... ההערה כבר קיימת במאגר" }).then(messageRetryHandler.addMessage);
+                if (err) return sock.sendMessage(id, { text: "אופס... ההערה כבר קיימת במאגר" });
 
-                sock.sendMessage(id, { text: "ההערה נשמרה בהצלחה" }).then(messageRetryHandler.addMessage);
+                sock.sendMessage(id, { text: "ההערה נשמרה בהצלחה" });
             });
     }
 
@@ -341,8 +398,8 @@ NoteHendler.prototype.saveNote1 = async function (msg, sock, isGlobal = false, i
 
 /**
  * 
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
- * @param {import('@adiwajshing/baileys').WASocket} sock 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').WASocket} sock 
  * @param {boolean} isAdmin default false
  */
 NoteHendler.prototype.deleteNote1 = async function (msg, sock, isAdmin = false) {
@@ -352,7 +409,7 @@ NoteHendler.prototype.deleteNote1 = async function (msg, sock, isAdmin = false) 
     // get note name
     let msgText = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
     let q = msgText.split(" ")[1].split("\n")[0];
-    if (!q) return sock.sendMessage(id, { text: "אופס... נראה ששכחת לכתוב את שם ההערה" }).then(messageRetryHandler.addMessage);
+    if (!q) return sock.sendMessage(id, { text: "אופס... נראה ששכחת לכתוב את שם ההערה" });
 
     // check if the note already exist
     let result = await allNotes.find({ question: q });
@@ -362,7 +419,7 @@ NoteHendler.prototype.deleteNote1 = async function (msg, sock, isAdmin = false) 
 
     // is 0 - not exist
     if (!result.length)
-        return sock.sendMessage(id, { text: "אופס... אין הערה בשם זה" }).then(messageRetryHandler.addMessage);
+        return sock.sendMessage(id, { text: "אופס... אין הערה בשם זה" });
 
     let privateNote = result.filter(res => res.chat === id)
     let federNote = result.filter(res => res.federation === feder)
@@ -370,29 +427,29 @@ NoteHendler.prototype.deleteNote1 = async function (msg, sock, isAdmin = false) 
     // delete private
     if (privateNote.length) {
         allNotes.deleteOne({ _id: privateNote[0]._id }, (err, res) => {
-            if (err) return sock.sendMessage(id, { text: "אופס... משהו השתבש" }).then(messageRetryHandler.addMessage);
+            if (err) return sock.sendMessage(id, { text: "אופס... משהו השתבש" });
 
-            sock.sendMessage(id, { text: "ההערה נמחקה בהצלחה" }).then(messageRetryHandler.addMessage);
+            sock.sendMessage(id, { text: "ההערה נמחקה בהצלחה" });
         })
 
     }
     // admin can delete federtion note
     else if (isAdmin && federNote.length) {
         allNotes.deleteOne({ _id: federNote[0]._id }, (err, res) => {
-            if (err) return sock.sendMessage(id, { text: "אופס... משהו השתבש" }).then(messageRetryHandler.addMessage);
+            if (err) return sock.sendMessage(id, { text: "אופס... משהו השתבש" });
 
-            sock.sendMessage(id, { text: "ההערה נמחקה בהצלחה" }).then(messageRetryHandler.addMessage);
+            sock.sendMessage(id, { text: "ההערה נמחקה בהצלחה" });
         })
     }
     else
-        sock.sendMessage(id, { text: "אופס! אין לך הרשאה למחוק את ההערה" }).then(messageRetryHandler.addMessage);
+        sock.sendMessage(id, { text: "אופס! אין לך הרשאה למחוק את ההערה" });
 
 }
 
 /**
  * activate by the command ```!notes``` or ```!הערות```
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
- * @param {import('@adiwajshing/baileys').WASocket} sock 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').WASocket} sock 
  */
 NoteHendler.prototype.getAllNotes1 = async function (msg, sock) {
     let id = msg.key.remoteJid;
@@ -413,7 +470,7 @@ NoteHendler.prototype.getAllNotes1 = async function (msg, sock) {
     let privateNotes = [...resultPrivate, ...resultPrivateMedia];
 
     if (globalNotes.length === 0 && privateNotes.length === 0)
-        return sock.sendMessage(id, { text: "לא קיימות הערות" }).then(messageRetryHandler.addMessage);
+        return sock.sendMessage(id, { text: "לא קיימות הערות" });
 
     // create the message
     let str = "";
@@ -432,13 +489,13 @@ NoteHendler.prototype.getAllNotes1 = async function (msg, sock) {
 
     str += "\nניתן לגשת להערה על ידי # או על ידי הפקודה !get";
 
-    return sock.sendMessage(id, { text: str }).then(messageRetryHandler.addMessage);
+    return sock.sendMessage(id, { text: str });
 }
 
 /**
  * activate by the command ```!get <note name>``` or ```#<note name>```
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
- * @param {import('@adiwajshing/baileys').WASocket} sock
+ * @param {import('baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').WASocket} sock
 */
 NoteHendler.prototype.getNote1 = async function (msg, sock) {
     let id = msg.key.remoteJid;
@@ -450,35 +507,30 @@ NoteHendler.prototype.getNote1 = async function (msg, sock) {
 
     // note with text
     let result = await savedNotes.findOne({ q: q, chat: id });
-    if (result) return sock.sendMessage(id, { text: result.a }).then(messageRetryHandler.addMessage);
+    if (result) return sock.sendMessage(id, { text: result.a });
 
     result = await savedNotes.findOne({ q: q, isGlobal: true });
-    if (result) return sock.sendMessage(id, { text: result.a }).then(messageRetryHandler.addMessage);
+    if (result) return sock.sendMessage(id, { text: result.a });
 
     // note with media
     let resultMedia = await mediaNote.findOne({ q: q, chat: id });
     if (!resultMedia) resultMedia = await mediaNote.findOne({ q: q, isGlobal: true });
 
     // note not found
-    if (!result && !resultMedia) return sock.sendMessage(id, { text: "אופס... אין הערה בשם זה" }).then(messageRetryHandler.addMessage);
+    if (!result && !resultMedia) return sock.sendMessage(id, { text: "אופס... אין הערה בשם זה" });
 
     // send the media
     switch (resultMedia.type) {
         case MsgType.IMAGE:
-            return sock.sendMessage(id, { image: resultMedia.buffer, mimetype: resultMedia.mimetype })
-                .then(messageRetryHandler.addMessage);
+            return sock.sendMessage(id, { image: resultMedia.buffer, mimetype: resultMedia.mimetype });
         case MsgType.VIDEO:
-            return sock.sendMessage(id, { video: resultMedia.buffer, mimetype: resultMedia.mimetype })
-                .then(messageRetryHandler.addMessage);
+            return sock.sendMessage(id, { video: resultMedia.buffer, mimetype: resultMedia.mimetype });
         case MsgType.AUDIO:
-            return sock.sendMessage(id, { audio: resultMedia.buffer, mimetype: resultMedia.mimetype })
-                .then(messageRetryHandler.addMessage);
+            return sock.sendMessage(id, { audio: resultMedia.buffer, mimetype: resultMedia.mimetype });
         case MsgType.STICKER:
-            return sock.sendMessage(id, { sticker: resultMedia.buffer, mimetype: resultMedia.mimetype })
-                .then(messageRetryHandler.addMessage);
+            return sock.sendMessage(id, { sticker: resultMedia.buffer, mimetype: resultMedia.mimetype });
         case MsgType.DOCUMENT:
-            return sock.sendMessage(id, { document: resultMedia.buffer, mimetype: resultMedia.mimetype, fileName: resultMedia.fileName })
-                .then(messageRetryHandler.addMessage);
+            return sock.sendMessage(id, { document: resultMedia.buffer, mimetype: resultMedia.mimetype, fileName: resultMedia.fileName });
     }
 }
 

@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import translate from '../custom_modules/Translate.js';
-import { downloadMediaMessage } from '@adiwajshing/baileys'
+import { downloadMediaMessage } from 'baileys'
 
 export default class UnofficalGPT {
     /**
@@ -18,7 +18,7 @@ export default class UnofficalGPT {
 
     /**
      * chat with cosmosrp
-     * @param {import('@adiwajshing/baileys').proto.WebMessageInfo[]} msgs
+     * @param {import('baileys').proto.WebMessageInfo[]} msgs
      * @returns {Promise<{id: string, created: number, model: "cosmosrp-001", object: "chat.completion",
      *              choices: [{
      *                  finish_reason: "stop" | "max_tokens" | "timeout", index: number,
@@ -32,7 +32,7 @@ export default class UnofficalGPT {
      *         }>}
      */
     async chatWithCosmosRP(msgs) {
-        /** @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg */
+        /** @param {import('baileys').proto.WebMessageInfo} msg */
         async function formatMessage(msg) {
             if (msg.message?.imageMessage)
                 return [
@@ -98,7 +98,7 @@ export default class UnofficalGPT {
 
     /**
      * chat with gpt
-     * @param {import('@adiwajshing/baileys').proto.WebMessageInfo[]} msgs
+     * @param {import('baileys').proto.WebMessageInfo[]} msgs
      */
     async conversation(msgs) {
         let data = {
@@ -144,7 +144,7 @@ export default class UnofficalGPT {
     /**
      * TL:DR the conversation is a list of messages
      * * this model know only english well, hebrew need to be translated
-     * @param {import('@adiwajshing/baileys').proto.WebMessageInfo[]} msgs
+     * @param {import('baileys').proto.WebMessageInfo[]} msgs
      * @returns {Promise<{
      *              id: string;
      *              created: number;

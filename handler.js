@@ -4,17 +4,13 @@ import noteHendler from './helpers/noteHandler.js';
 import BarkuniSticker from './helpers/berkuniHandler.js';
 import KupaRashitSticker from './helpers/kupaRashitHandler.js';
 import sendSticker from './helpers/stickerMaker.js';
-import { DownloadV2, DownloadVideoMP4, downloadTYoutubeVideo, handlerQueueYTDownload } from './helpers/downloader.js';
+import { downloadFromLink, YouTubeDownload } from './helpers/youtube.js';
 import { GLOBAL } from './src/storeMsg.js';
-import MemoryStore from './src/memorystore.js';
-import messageRetryHandler from './src/retryHandler.js'; // can be removed
-import ChatGPT from './helpers/chatgpt.js';
+//import ChatGPT from './helpers/chatgpt.js';
 import UnofficalGPT from './helpers/unofficalGPT.js';
 import GroqAPI from './helpers/groq.js';
-import throttledQueue from 'throttled-queue';
+//import { throttledQueue } from 'throttled-queue';
 import { info } from './helpers/globals.js';
-import fetch from 'node-fetch';
-import fs from 'fs';
 import { getMsgType, MsgType } from './helpers/msgType.js';
 import { errorMsgQueue, msgQueue, sendCustomMsgQueue, sendMsgQueue, TYQueue } from './src/QueueObj.js';
 import translate, { languages } from './custom_modules/Translate.js';
@@ -28,7 +24,7 @@ import Misc from './helpers/misc.js';
 
 
 //const chatGPT = new ChatGPT(process.env.OPENAI_API_KEY , false)
-const chatGPT = new ChatGPT(process.env.OPENAI_API_KEY, true)
+//const chatGPT = new ChatGPT(process.env.OPENAI_API_KEY, true)
 const unofficalGPT = new UnofficalGPT(process.env.UNOFFICALGPT_API_KEY)
 const Groq = new GroqAPI(process.env.GROQ_API_KEY);
 
@@ -36,23 +32,25 @@ const superuser = process.env.SUPERUSER ?? "";
 const PRODUCTION = process.env.NODE_ENV === 'production';
 const DEFAULT_COUNT_USER_TO_MUTE = 7;
 
-const throttle = throttledQueue(3, 15000);
+//const throttle = throttledQueue(3, 15000);
 
 /**
  *
- * @param {import('@adiwajshing/baileys').WASocket} sock
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').WASocket} sock
+ * @param {import('baileys').proto.WebMessageInfo} msg
  * @param {import('./mongo')} mongo
  */
 export default async function handleMessage(sock, msg, mongo) {
     let id = msg.key.remoteJid || "";
+    let idAlt = msg.key.remoteJidAlt || ""; 
+
     let caption = msg.message?.imageMessage?.caption || msg.message?.videoMessage?.caption || "";
     let textMsg = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
     caption = caption.replace(new RegExp(String.fromCharCode(160), "g"), " ").trim();
     textMsg = textMsg.replace(new RegExp(String.fromCharCode(160), "g"), " ").trim();
 
     // update the bot without updating npm packages
-    if (id.includes(superuser)) {
+    if (id.includes(superuser) || idAlt.includes(superuser)) {
         if (textMsg.startsWith("!update") || textMsg.startsWith("!עדכן")) {
             // pull from git
             exec('git pull', async (err, stdout, stderr) => {
@@ -204,8 +202,7 @@ export default async function handleMessage(sock, msg, mongo) {
         info.YTdeleteSearch(id);
 
         if (TYQueue.size > 0) sendMsgQueue(id, "מקומך בתור: " + TYQueue.size + "\nאנא המתן...");
-        TYQueue.add(async () => await downloadTYoutubeVideo(id, video.id));
-        //TYQueue.add(async () => await handlerQueueYTDownload(id, video.id));
+        TYQueue.add(async () => await downloadFromLink(id, video.url, YTinfo.type));
         return;
     }
     // set group config
@@ -213,20 +210,20 @@ export default async function handleMessage(sock, msg, mongo) {
     if (stage !== undefined && !id.endsWith("@g.us"))
         switch (stage) {
             case -1:
-                return sock.sendMessage(id, { text: "חלה שגיאה, אנא נסה שנית" }).then(messageRetryHandler.addMessage);
+                return sock.sendMessage(id, { text: "חלה שגיאה, אנא נסה שנית" });
             case 0:
-                return sock.sendMessage(id, { text: "הכנס את מספר המשתמשים להשתקה" }).then(messageRetryHandler.addMessage);
+                return sock.sendMessage(id, { text: "הכנס את מספר המשתמשים להשתקה" });
             case 1:
-                return sock.sendMessage(id, { text: "הכנס הודעה שתשלח בקבוצה בעת ההשתקה" }).then(messageRetryHandler.addMessage);
+                return sock.sendMessage(id, { text: "הכנס הודעה שתשלח בקבוצה בעת ההשתקה" });
             case 2:
-                return sock.sendMessage(id, { text: "הכנס קוד פדרציה" }).then(messageRetryHandler.addMessage);
+                return sock.sendMessage(id, { text: "הכנס קוד פדרציה" });
             case 3:
                 return sock.sendMessage(id, {
                     text: getGroupConfig(id) +
                         "\nהאם ברצונך לשמור את השינויים?\nכן - לשמור,  לא - לביטול, ערוך - כדי לערוך שוב."
-                }).then(messageRetryHandler.addMessage);
+                });
             case 4:
-                return sock.sendMessage(id, { text: "ההגדרות נשמרו בהצלחה!" }).then(messageRetryHandler.addMessage);
+                return sock.sendMessage(id, { text: "ההגדרות נשמרו בהצלחה!" });
         }
 
     // text message
@@ -254,6 +251,10 @@ export default async function handleMessage(sock, msg, mongo) {
 
 
     if (textMsg.startsWith("!כולם") || textMsg.startsWith("!everyone")) {
+        // temp disable
+        if (!msg.key.participant?.includes(superuser))
+            return sendMsgQueue(id, "הפקודה לא פעילה כרגע");
+
         if (!msg.key.remoteJid.includes("@g.us"))
             return sendMsgQueue(id, "הפקודה זמינה רק בקבוצות");
 
@@ -394,7 +395,7 @@ export default async function handleMessage(sock, msg, mongo) {
                     `ברגע ש${GLOBAL.groupConfig?.[id]?.countUsersToMute ?? DEFAULT_COUNT_USER_TO_MUTE} אנשים יסכימו איתו ויגיבו על ההודעה הזאת בלייק, הקבוצה תושתק.\n` +
                     `אתם מסכימים?`,
                 mentions: [msg.key.participant]
-            }).then(messageRetryHandler.addMessage);
+            });
             // store the msg id
             return info.makeReactionMsg(botMsg, muteTime_min);
         }
@@ -534,19 +535,28 @@ export default async function handleMessage(sock, msg, mongo) {
             return sendMsgQueue(id, "אין חיבור למסד נתונים");
 
         let issuperuser = false;
-        if (msg.key.remoteJid?.includes(superuser) || msg.key.participant?.includes(superuser))
+        if (msg.key.remoteJid?.includes(superuser) || msg.key.participant?.includes(superuser)
+            || msg.key.remoteJidAlt?.includes(superuser) || msg.key.participantAlt?.includes(superuser))
             issuperuser = true;
 
         return noteHendler.saveNote(msg, true, issuperuser);
     }
 
     // delete note
+    if (textMsg.startsWith('!deleteall') || textMsg.startsWith('!מחקהכל')) {
+        if (!mongo.isConnected)
+            return sendMsgQueue(id, "אין חיבור למסד נתונים");
+
+        return noteHendler.deleteAll(msg);
+    }
+
     if (textMsg.startsWith('!delete') || textMsg.startsWith('!מחק')) {
         if (!mongo.isConnected)
             return sendMsgQueue(id, "אין חיבור למסד נתונים");
 
         let issuperuser = false;
-        if (msg.key.remoteJid?.includes(superuser) || msg.key.participant?.includes(superuser))
+        if (msg.key.remoteJid?.includes(superuser) || msg.key.participant?.includes(superuser) ||
+            msg.key.remoteJidAlt?.includes(superuser) || msg.key.participantAlt?.includes(superuser))
             issuperuser = true;
 
         return noteHendler.deleteNote(msg, sock, issuperuser);
@@ -634,7 +644,7 @@ export default async function handleMessage(sock, msg, mongo) {
     // used when dowlnoading file from LevNet
     if (textMsg.startsWith("!pdf")) {
         let customName = textMsg.replace("!pdf", "").trim();
-        let qoutedMsg = await MemoryStore.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
+        let qoutedMsg = await GLOBAL.store.loadMessage(id, msg.message?.extendedTextMessage?.contextInfo?.stanzaId);
         if (!qoutedMsg) return sendMsgQueue(id, "יש לצטט הודעה");
         return downloadFileAsPDF(qoutedMsg, customName);
     }
@@ -704,13 +714,13 @@ export default async function handleMessage(sock, msg, mongo) {
         //     console.log(resImage?.data?.[0]?.url || resImage.error);
         //     if (resImage?.data?.[0]?.url) {
         //         for (const urlObj of resImage.data)
-        //             await sock.sendMessage(id, { image: { url: urlObj.url } }).then(messageRetryHandler.addMessage);
+        //             await sock.sendMessage(id, { image: { url: urlObj.url } });
         //         return;
         //     }
-        //     return sock.sendMessage(id, { text: resImage.error + "\n" + resImage.hint }).then(messageRetryHandler.addMessage);
+        //     return sock.sendMessage(id, { text: resImage.error + "\n" + resImage.hint });
         // } catch (error) {
         //     console.error(error);
-        //     return sock.sendMessage(id, { text: "אופס... חלה שגיאה\nנסה לשאול שוב" }).then(messageRetryHandler.addMessage);
+        //     return sock.sendMessage(id, { text: "אופס... חלה שגיאה\nנסה לשאול שוב" });
         // }
     }
 
@@ -725,7 +735,7 @@ export default async function handleMessage(sock, msg, mongo) {
         }
 
         //let history = await store.loadMessages(id, numMsgToLoad);
-        return MemoryStore.loadMessages(id, numMsgToLoad + 1)
+        return GLOBAL.store.loadMessages(id, numMsgToLoad + 1)
             .then(async (history) => {
                 console.log('history length loaded:', history.length);
 
@@ -744,6 +754,11 @@ export default async function handleMessage(sock, msg, mongo) {
                 }, null, 2) || res);
 
                 //GLOBAL.updateUnofficialGPTcredit(res?.usage.total_tokens, res.model);
+                if (!res.choices?.[0]?.message?.content){
+                    errorMsgQueue(res);
+                    return sendMsgQueue(id, "אופס... חלה שגיאה\nנסה לשאול שוב");
+                }
+
                 return sendMsgQueue(id, res.choices[0].message.content);
             })
 
@@ -768,7 +783,7 @@ export default async function handleMessage(sock, msg, mongo) {
             return sendMsgQueue(id, "יש להגיב על הודעה עם הטקסט שברצונך לסכם");
 
         // get qouted message
-        let quotedMsg = await MemoryStore.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
+        let quotedMsg = await GLOBAL.store.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
         if (!quotedMsg)
             return sendMsgQueue(id, "לא מצאתי את ההודעה שהגבת עליה, נסה להגיב על ההודעה שוב בעוד כמה שניות");
 
@@ -809,19 +824,8 @@ export default async function handleMessage(sock, msg, mongo) {
      * YOUTUBE
      #########*/
     if ((textMsg.startsWith("!youtube") || textMsg.startsWith("!יוטיוב"))) {
-        //return sendMsgQueue(id, "שירות הורדה מיוטיוב לא זמין כרגע");
-        // return sendMsgQueue(id, "שירות הורדת קובץ שמע מיוטיוב לא זמין כרגע."
-        //     + "\nניתן להשתמש בפקודה '!סרטון' להורדת סרטונים מיוטיוב"
-        //     + "\nאו לחילופין להשתמש בשירותים אחרים כמו t.me/Musicvideobybot");
-        return DownloadV2(msg);
+        return YouTubeDownload(id, textMsg);
     }
-
-    if ((textMsg.startsWith("!video") || textMsg.startsWith("!Video")
-        || textMsg.startsWith("!וידאו") || textMsg.startsWith("!סרטון"))) {
-        //return sendMsgQueue(id, "שירות הורדה מיוטיוב לא זמין כרגע");
-        return DownloadVideoMP4(id, textMsg);
-    }
-
 
     // ##############
     // LOVE Calculator
@@ -882,7 +886,8 @@ export default async function handleMessage(sock, msg, mongo) {
     if (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid) {
         let mentionedJids = msg.message.extendedTextMessage.contextInfo.mentionedJid;
         const SOCK_NUM = GLOBAL.sock.user.id.split(":")[0].split("@")[0];
-        if (mentionedJids.some(jid => jid.startsWith(SOCK_NUM)))
+        const SOCK_LID = GLOBAL.sock.user.lid.split(":")[0].split("@")[0];
+        if (mentionedJids.some(jid => jid.startsWith(SOCK_NUM) || jid.startsWith(SOCK_LID)))
             return sendMsgQueue(id, "היי אני באבי בוט, מישהו קרא לי?\nשלחו לי את הפקודה '!פקודות' כדי שאני אראה לכם מה אני יודע לעשות");
     }
 
@@ -1038,8 +1043,8 @@ export default async function handleMessage(sock, msg, mongo) {
         if (!msg.message?.extendedTextMessage?.contextInfo?.stanzaId)
             return sendMsgQueue(id, "יש לצטט הודעה");
 
-        const qoutedMsg = await MemoryStore.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
-        /** @type {{keyMsg: {},groupInviteMessage: import('@adiwajshing/baileys').proto.Message.IGroupInviteMessage}} */
+        const qoutedMsg = await GLOBAL.store.loadMessage(id, msg.message.extendedTextMessage.contextInfo.stanzaId);
+        /** @type {{keyMsg: {},groupInviteMessage: import('baileys').proto.Message.IGroupInviteMessage}} */
         const inviteDetails = JSON.parse(qoutedMsg.message?.conversation || qoutedMsg.message?.extendedTextMessage?.text || "{}");
 
         if (!inviteDetails.groupInviteMessage) return sendMsgQueue(id, "לא נמצאו פרטי הזמנה");
@@ -1056,7 +1061,7 @@ export default async function handleMessage(sock, msg, mongo) {
     // temporarily unavailable
     return;
     // if the bot got a message that is not a command
-    const history = (await MemoryStore.loadMessages(id, 20));
+    const history = (await GLOBAL.store.loadMessages(id, 20));
     throttle(() => {
         //sendCustomMsgQueue(id, { react: { text: '⏳', key: msg.key } });
         unofficalGPT.chatWithCosmosRP(history)
@@ -1086,7 +1091,7 @@ function isIncludeLink(str) {
 
 /**
  *
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').proto.WebMessageInfo} msg
  * @param {Number} muteTime_min
  */
 async function muteGroup(msg, muteTime_min) {

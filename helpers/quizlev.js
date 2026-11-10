@@ -10,7 +10,7 @@ let intervalID;
 
 /**
  * 
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg
+ * @param {import('baileys').proto.WebMessageInfo} msg
  */
 function handleAnswerQuiz(msg) {
     const id = msg.key.remoteJid;
@@ -102,10 +102,10 @@ async function sendQuizToGroups() {
         currentGroup.tempAnswer = quizData;
 
         if (quizData.typeQuestion === "text") {
-            await GLOBAL.sock.sendMessage(grp, quizData.question).then(messageRetryHandler.addMessage);
+            await GLOBAL.sock.sendMessage(grp, quizData.question);
         }
         else if (quizData.typeQuestion === "image") {
-            await GLOBAL.sock.sendMessage(grp, { image: { url: quizData.question } }).then(messageRetryHandler.addMessage);
+            await GLOBAL.sock.sendMessage(grp, { image: { url: quizData.question } });
         }
     }
 }

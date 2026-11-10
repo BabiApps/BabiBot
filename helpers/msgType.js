@@ -11,7 +11,7 @@ export const MsgType = {
 
 /**
  * 
- * @param {import('@adiwajshing/baileys').proto.WebMessageInfo} msg 
+ * @param {import('baileys').proto.WebMessageInfo} msg 
  * @returns default {type: MsgType.TEXT, mime: undefined}
  */
 export function getMsgType(msg) {
